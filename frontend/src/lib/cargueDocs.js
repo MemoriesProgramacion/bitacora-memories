@@ -1,0 +1,103 @@
+// Columnas del cargue de documentación por etapas. Son las columnas que el navegador extrae de los dos Excel,
+// con sus alias; el servidor arma con ellas el expediente de cada unidad. Si aquí se agrega una columna, hay
+// que usarla también en el servicio del backend.
+export const HOJA_MASTER = 'up';
+export const HOJA_AUDITORIA = 'AUDITORIA';
+
+// Plantillas vacías, con solo encabezados y una hoja de instrucciones, que se descargan desde el cargue de
+// datos y viven en public/plantillas.
+export const PLANTILLAS = {
+  master: { href: '/plantillas/plantilla_BASE_MASTER_EP.xlsx', archivo: 'plantilla_BASE_MASTER_EP.xlsx' },
+  auditoria: {
+    href: '/plantillas/plantilla_auditoria_global_archivos.xlsx',
+    archivo: 'plantilla_auditoria_global_archivos.xlsx',
+  },
+  subsanacion: { href: '/plantillas/plantilla_subsanaciones.xlsx', archivo: 'plantilla_subsanaciones.xlsx' },
+  rit: { href: '/plantillas/plantilla_RIT.xlsx', archivo: 'plantilla_RIT.xlsx' },
+};
+
+// Columnas de la hoja up de la base maestra.
+export const COLUMNAS_MASTER = [
+  { alias: 'id_unico', nombre: 'ID_unico' },
+  { alias: 'region', nombre: 'region' },
+  { alias: 'nodo', nombre: 'nodo' },
+  { alias: 'triada', nombre: 'triada' },
+  { alias: 'enlace_carpeta', nombre: 'enlace_carpeta' },
+  { alias: 'doc_interventoria', nombre: 'doc_interventoria' },
+  { alias: 'observaciones', nombre: 'observaciones', ocurrencia: 2 },
+  { alias: 'rit', nombre: 'rit' },
+  { alias: 'rit_fecha_enviado', nombre: 'fecha_enviado' },
+  { alias: 'rit_ubicacion', nombre: 'ubicacion_rit' },
+  { alias: 'rit_direccion', nombre: 'direccion_rit' },
+  { alias: 'v1_documentacion', nombre: 'documentacion_visita1' },
+  { alias: 'v2_documentacion', nombre: 'documentacion_visita2' },
+  { alias: 'v1_fecha', nombre: 'fecha_de_visita' },
+  { alias: 'v1_reprogramacion', nombre: 'fecha_de_reprogramacion' },
+  { alias: 'v1_agendamiento', nombre: 'estado_de_agendamiento' },
+  { alias: 'v1_modalidad', nombre: 'modalidad_de_visita' },
+  { alias: 'talleres_documentacion', nombre: 'documentacion_talleres' },
+  { alias: 'capitalizacion_documentacion', nombre: 'documentacion_capitalizacion' },
+  { alias: 'pdf_carrito', nombre: 'PDF_carrito' },
+  { alias: 'plan_inversion', nombre: 'plan_inversion' },
+  { alias: 'plan_negocio', nombre: 'plan_negocio' },
+  { alias: 'comite_subsanaciones', nombre: 'comite_subsanaciones' },
+  { alias: 'proceso_subsanacion', nombre: 'proceso_subsanacion' },
+  { alias: 'compra_documentacion', nombre: 'documentacion_compra' },
+  { alias: 'v3_documentacion', nombre: 'documentacion_visita3' },
+  { alias: 'evento_asistencia', nombre: 'evento_asistencia' },
+  { alias: 'entrega_fecha', nombre: 'entrega_fecha' },
+  { alias: 'entrega_reprogramacion', nombre: 'entrega_reprogramacion' },
+  { alias: 'entrega_resultado', nombre: 'entrega_resultado' },
+  { alias: 'v3_fecha', nombre: 'visita3_fecha' },
+  { alias: 'v3_reprogramacion', nombre: 'visita3_reprogramacion' },
+  { alias: 'v3_resultado', nombre: 'visita3_resultado' },
+  { alias: 'v3_modalidad', nombre: 'visita3_modalidad' },
+];
+
+// Columnas de la hoja AUDITORIA del archivo de auditoría; las marcadas como opcionales ya cambiaron de nombre o
+// aún no existen.
+export const COLUMNAS_AUDITORIA = [
+  { alias: 'id_unico', nombre: 'id_unico' },
+  { alias: 'nodo_auditoria', nombre: 'gestor' },
+  { alias: 'tiene_rit', nombre: 'tiene_rit' },
+  { alias: 'total_dias_rit', nombre: 'total_dias_rit', opcional: true },
+  { alias: 'doc_completa_gestor', nombre: 'doc_completa_gestor' },
+  { alias: 'doc_completa_triada', nombre: 'doc_completa_triada' },
+  { alias: 'up_aprobada', nombre: 'up_aprobada', opcional: true },
+  { alias: 'lote_up_aprobada', nombre: 'lote_up_aprobada', opcional: true },
+  { alias: 'novedad_dps_gestor', nombre: 'novedad_dps_gestor', opcional: true },
+  { alias: 'novedad_contacto_no_posible', nombre: 'novedad_contacto_no_posible', opcional: true },
+  { alias: 'b00_archivos', nombre: 'docs_00_documentacion_beneficiario' },
+  { alias: 'b00_completa', nombre: 'doc_completa_beneficiario_00' },
+  { alias: 'b00_checks', nombre: 'check_docs_00_documentacion_beneficiario' },
+  { alias: 'v1_archivos', nombre: 'docs_01_visita1' },
+  { alias: 'v1_completa', nombre: 'doc_completa_visita_1' },
+  { alias: 'v1_checks', nombre: 'check_docs_01_visita1' },
+  { alias: 'v2_archivos', nombre: 'docs_02_visita2' },
+  { alias: 'v2_completa', nombre: 'doc_completa_visita_2' },
+  { alias: 'v2_checks', nombre: 'check_docs_02_visita2' },
+  { alias: 'fort_archivos', nombre: 'docs_03_fortalecimiento' },
+  { alias: 'fort_completa', nombre: 'doc_completa_transferencia' },
+  { alias: 'fort_checks', nombre: 'check_docs_03_fortalecimiento' },
+  { alias: 'm1_archivos', nombre: 'docs_03_01_modulo_1' },
+  { alias: 'm1_checks', nombre: 'check_docs_03_01_modulo_1' },
+  { alias: 'm2_archivos', nombre: 'docs_03_02_modulo_2' },
+  { alias: 'm2_checks', nombre: 'check_docs_03_02_modulo_2' },
+  { alias: 'm3_archivos', nombre: 'docs_03_03_modulo_3' },
+  { alias: 'm3_checks', nombre: 'check_docs_03_03_modulo_3' },
+  { alias: 'cap_archivos', nombre: 'docs_04_01_aprobacion' },
+  { alias: 'cap_completa', nombre: 'doc_completa_capitalizacion' },
+  { alias: 'cap_checks', nombre: 'check_docs_04_01_aprobacion' },
+  { alias: 'cot1_archivos', nombre: 'docs_04_02_cotizacion_ganadora' },
+  { alias: 'cot1_checks', nombre: 'check_docs_04_02_cotizacion_ganadora' },
+  { alias: 'cot2_archivos', nombre: 'docs_04_02_cotizacion_proveedor_2', opcional: true },
+  { alias: 'cot2_checks', nombre: 'check_docs_04_02_proovedor_2', opcional: true },
+  { alias: 'cot3_archivos', nombre: 'docs_04_02_cotizacion_proveedor_3', opcional: true },
+  { alias: 'cot3_checks', nombre: 'check_docs_04_02_proveedor_3', opcional: true },
+  { alias: 'compra_archivos', nombre: 'docs_04_03_soportes_compra', opcional: true },
+  { alias: 'compra_checklist', nombre: 'checklist_docs_compras', opcional: true },
+  { alias: 'compra_checks', nombre: 'check_docs_compras', opcional: true },
+  { alias: 'entrega_archivos', nombre: 'docs_04_03_soportes_entrega', opcional: true },
+  { alias: 'entrega_checklist', nombre: 'checklist_docs_entregas', opcional: true },
+  { alias: 'entrega_checks', nombre: 'check_docs_entregas', opcional: true },
+];

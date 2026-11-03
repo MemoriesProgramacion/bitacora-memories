@@ -1,0 +1,1531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Registro fotográfico de items — Bitácora Memories</title>
+<style>
+  /* ============================================================
+     PALETA — misma paleta de Bitácora Memories
+     ============================================================ */
+  :root{
+    --marino:#3D3A78;
+    --marino2:#4A4690;
+    --acento:#F5A488;
+    --rojo:#D14D6A;
+    --verde-ok:#38a169;
+    --azul:#4A4690;
+    --bg:#F4F2F8;
+    --card:#ffffff;
+    --texto:#2B2856;
+    --gris:#8E8AA6;
+    --borde:#E2DEEC;
+    --radius:12px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  html,body{ margin:0; padding:0; }
+
+  body{
+    background:var(--bg);
+    color:var(--texto);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  button{ font-family:inherit; }
+  .ico{ display:block; flex-shrink:0; }
+
+  /* ---------- encabezado de la herramienta ---------- */
+  .app-header{ background:var(--marino); padding:20px clamp(16px,4vw,40px); }
+  .app-header h1{ color:#fff; margin:0 0 3px; font-size:19px; font-weight:700; }
+  .app-header p{ color:rgba(255,255,255,.6); margin:0; font-size:12.5px; }
+
+  /* ---------- indicador de pasos ---------- */
+  .stepper{
+    position:sticky; top:0; z-index:40;
+    background:var(--marino2); border-bottom:1px solid rgba(255,255,255,.08);
+    display:flex; align-items:center; justify-content:center; gap:0;
+    padding:0 12px; overflow-x:auto;
+  }
+  .step{
+    display:flex; align-items:center; gap:8px; padding:12px 14px;
+    text-decoration:none; color:rgba(255,255,255,.55); white-space:nowrap;
+  }
+  .step-num{
+    width:20px; height:20px; border-radius:50%; flex-shrink:0;
+    border:1.5px solid rgba(255,255,255,.35); color:rgba(255,255,255,.75);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700;
+  }
+  .step-label{ font-size:12.5px; font-weight:600; }
+  .step.completo .step-num{ background:var(--verde-ok); border-color:var(--verde-ok); color:#fff; }
+  .step.completo .step-label{ color:#fff; }
+  .step-sep{ width:20px; height:1px; background:rgba(255,255,255,.18); flex-shrink:0; }
+  @media (max-width:480px){ .step-label{ display:none; } .step{ padding:12px 8px; } }
+
+  .wrap{ max-width:900px; margin:0 auto; padding:22px clamp(16px,4vw,40px) 130px; }
+
+  section.card{ scroll-margin-top:66px; }
+  .card{
+    background:var(--card);
+    border:1px solid var(--borde);
+    border-radius:var(--radius);
+    padding:20px clamp(16px,3vw,24px);
+    margin-bottom:20px;
+  }
+  .card-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
+  .card-head h2{ margin:0; font-size:15px; }
+  .card-head .paso{ font-size:11px; font-weight:700; color:var(--gris); }
+  .linea-corta{ margin:-8px 0 16px; font-size:12.5px; color:var(--texto); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .linea-corta b{ color:var(--marino); }
+  .subtitulo{ margin:18px 0 10px; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gris); }
+
+  /* ---------- ayuda bajo demanda (tooltip) ---------- */
+  .ayuda-btn{
+    width:16px; height:16px; border-radius:50%; flex-shrink:0;
+    border:1px solid var(--borde); background:#fff; color:var(--gris);
+    font-size:10px; font-weight:700; line-height:1; cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .ayuda-btn:hover{ border-color:var(--acento); color:var(--marino); }
+  .tooltip-panel{
+    display:none; position:absolute; z-index:25; width:230px; max-width:70vw;
+    top:26px; right:0; background:var(--marino); color:rgba(255,255,255,.92);
+    font-size:11.5px; line-height:1.5; font-weight:400; text-transform:none; letter-spacing:normal;
+    border-radius:8px; padding:10px 12px; box-shadow:0 8px 20px rgba(0,0,0,.18);
+  }
+  .tooltip-panel.visible{ display:block; }
+  .tooltip-panel.abajo-izq{ top:auto; bottom:26px; right:auto; left:0; }
+
+  /* ---------- campos obligatorios del encabezado ---------- */
+  .grid-obligatorios{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media (max-width:560px){ .grid-obligatorios{ grid-template-columns:1fr; } }
+
+  .campo-obligatorio{ position:relative; }
+  .campo-obligatorio.span2{ grid-column:1 / -1; }
+  .campo-cantidad-items{ margin-top:14px; }
+  .campo-fila-label{ display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:4px; }
+  .campo-obligatorio label{ font-size:13px; font-weight:700; color:var(--marino); }
+  .campo-obligatorio label .req{ color:var(--rojo); margin-left:2px; }
+  .campo-obligatorio input{
+    width:100%;
+    border:1px solid var(--borde);
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:13px;
+    color:var(--texto);
+    background:#fff;
+    font-family:inherit;
+  }
+  .campo-obligatorio input::placeholder{ color:#b7b2aa; }
+  .campo-obligatorio input:focus{ outline:none; border-color:var(--acento); }
+  .campo-obligatorio input.campo-vacio{ border-color:rgba(209,77,106,.5); background:rgba(209,77,106,.04); }
+
+  /* ---------- campos opcionales (colapsables) ---------- */
+  details.opcionales{ margin-top:18px; border-top:1px solid var(--borde); padding-top:14px; }
+  details.opcionales summary{
+    list-style:none; cursor:pointer; display:flex; align-items:center; gap:6px;
+    font-size:12.5px; font-weight:700; color:var(--marino);
+  }
+  details.opcionales summary::-webkit-details-marker{ display:none; }
+  details.opcionales summary .chev{ transition:transform .15s; color:var(--gris); }
+  details.opcionales[open] summary .chev{ transform:rotate(90deg); }
+  details.opcionales .contenido{ padding-top:14px; }
+
+  .campo-fila{
+    display:grid;
+    grid-template-columns:1fr 1fr auto;
+    gap:8px;
+    margin-bottom:8px;
+    align-items:center;
+  }
+  .campo-fila input{
+    width:100%;
+    border:1px solid var(--borde);
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:13px;
+    color:var(--texto);
+    background:#fff;
+  }
+  .campo-fila input:focus{ outline:none; border-color:var(--acento); }
+  .campo-fila input.campo-label{ font-weight:600; color:var(--marino); background:#FAF9FC; }
+
+  .btn-quitar-campo{
+    border:none; background:transparent; color:var(--gris);
+    cursor:pointer; padding:6px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-quitar-campo:hover{ color:var(--rojo); background:rgba(209,77,106,.08); }
+
+  .campo-hint{ font-size:11.5px; line-height:1.35; color:var(--gris); margin-top:4px; }
+  .campo-hint.ok{ color:#2f7d5b; }
+  .campo-hint.aviso{ color:#8A5A2B; }
+  .campo-hint.oculto{ display:none; }
+  .campo-obligatorio input.campo-autocompletado{ border-color:#2f7d5b; background:rgba(47,125,91,.07); }
+  .vacio-opcionales{ margin:0 0 10px; font-size:12px; color:var(--gris); }
+
+  .btn-secundario{
+    display:inline-flex; align-items:center; gap:6px;
+    border:1px dashed var(--borde); background:#fff; color:var(--marino);
+    font-size:12.5px; font-weight:600; padding:8px 14px; border-radius:8px; cursor:pointer;
+  }
+  .btn-secundario:hover{ border-color:var(--acento); color:var(--marino); background:rgba(245,164,136,.06); }
+  .btn-secundario:disabled{ opacity:.6; cursor:not-allowed; }
+
+  /* ---------- barra de herramientas de items ---------- */
+  .items-toolbar{ position:relative; margin-bottom:18px; }
+  .items-toolbar .ayuda-masiva{ margin:6px 0 0; font-size:11.5px; color:var(--gris); }
+
+  /* ---------- lista de items ---------- */
+  .item{
+    border:1px solid var(--borde);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:14px;
+    background:#fff;
+  }
+  .item-cabecera{ display:flex; align-items:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+  .item-num{
+    flex-shrink:0; width:26px; height:26px; border-radius:50%;
+    background:var(--marino); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;
+  }
+  .item-nombre{
+    flex:1 1 180px; min-width:140px;
+    border:1px solid var(--borde); border-radius:8px; padding:9px 10px;
+    font-size:13.5px; font-weight:600; color:var(--texto);
+  }
+  .item-nombre::placeholder{ color:#b7b2aa; font-weight:400; }
+  .item-nombre:focus{ outline:none; border-color:var(--acento); }
+
+  .estado-pill{
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; border:1px solid transparent; white-space:nowrap;
+  }
+  .estado-ok{ background:rgba(56,161,105,.12); color:var(--verde-ok); border-color:rgba(56,161,105,.35); }
+  .estado-falta{ background:rgba(209,77,106,.10); color:var(--rojo); border-color:rgba(209,77,106,.35); }
+
+  .item-controles{ display:flex; gap:4px; margin-left:auto; }
+  .btn-icono{
+    border:1px solid var(--borde); background:#fff; color:var(--marino);
+    width:30px; height:30px; border-radius:8px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-icono:hover:not(:disabled){ border-color:var(--acento); }
+  .btn-icono:disabled{ opacity:.35; cursor:not-allowed; }
+  .btn-icono.peligro:hover{ border-color:var(--rojo); color:var(--rojo); background:rgba(209,77,106,.06); }
+
+  .fotos-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:520px){ .fotos-grid{ grid-template-columns:1fr; } }
+
+  .dropzone-label{ font-size:12px; font-weight:700; color:var(--gris); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; display:block; }
+
+  .dropzone{
+    position:relative; min-height:160px;
+    border:2px dashed var(--borde); border-radius:10px; background:#FAF9FC; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    text-align:center; padding:14px; transition:border-color .15s, background .15s; overflow:hidden;
+  }
+  .dropzone:hover, .dropzone.dragover{ border-color:var(--acento); background:rgba(245,164,136,.07); }
+  .dropzone .icono{ font-size:26px; line-height:1; }
+  .dropzone .txt-principal{ font-size:12.5px; font-weight:600; color:var(--texto); }
+  .dropzone .txt-secundario{ font-size:11px; color:var(--gris); }
+
+  .dropzone.con-foto{ border-style:solid; border-color:var(--verde-ok); padding:0; background:#111; cursor:grab; }
+  .dropzone.con-foto img{ width:100%; height:160px; object-fit:cover; display:block; pointer-events:none; }
+  .dropzone.con-foto:active{ cursor:grabbing; }
+
+  /* ---------- intercambiar fotos de lugar (arrastrar o tocar) ---------- */
+  .handle-mover{
+    position:absolute; top:8px; left:8px; pointer-events:none;
+    background:rgba(43,40,86,.7); color:#fff; width:22px; height:22px; border-radius:6px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .dropzone.arrastrando{ opacity:.4; }
+  .dropzone.seleccionada{
+    border-color:var(--azul) !important; box-shadow:0 0 0 3px rgba(91,87,162,.25);
+  }
+  .dropzone.zona-destino{ border-color:var(--azul); background:rgba(91,87,162,.06); }
+  .dropzone.zona-destino .txt-principal, .dropzone.zona-destino .txt-secundario{ color:var(--azul); }
+  .dropzone.dragover-swap{ border-color:var(--azul) !important; background:rgba(91,87,162,.12) !important; }
+
+  .aviso-seleccion{
+    display:flex; align-items:center; gap:8px;
+    background:rgba(91,87,162,.08); color:#3D3A78; border:1px solid rgba(91,87,162,.3);
+    border-radius:8px; padding:9px 12px; font-size:12px; font-weight:600; margin-bottom:16px;
+  }
+  .aviso-seleccion.oculto{ display:none; }
+  .aviso-seleccion button{
+    margin-left:auto; border:none; background:transparent; color:#3D3A78; font-weight:700;
+    font-size:11.5px; cursor:pointer; text-decoration:underline; padding:2px;
+  }
+
+  .foto-overlay{ position:absolute; inset:0; display:flex; align-items:flex-end; justify-content:space-between; padding:8px; pointer-events:none; }
+  .foto-overlay .chip{
+    pointer-events:auto; background:rgba(43,40,86,.82); color:#fff; font-size:10.5px; font-weight:600;
+    padding:4px 8px; border-radius:6px; max-width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .foto-overlay .acciones{ pointer-events:auto; display:flex; gap:4px; }
+  .foto-overlay button{
+    border:none; background:rgba(43,40,86,.82); color:#fff; width:26px; height:26px; border-radius:6px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .foto-overlay button:hover{ background:var(--rojo); }
+  .foto-overlay button.cambiar:hover{ background:var(--azul); }
+
+  input[type="file"]{ display:none; }
+
+  .btn-agregar-item{
+    width:100%; border:2px dashed var(--borde); background:#fff; color:var(--marino);
+    font-size:13.5px; font-weight:700; padding:14px; border-radius:10px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn-agregar-item:hover{ border-color:var(--acento); background:rgba(245,164,136,.06); }
+
+  .vacio{ text-align:center; padding:28px 10px; color:var(--gris); font-size:13px; }
+
+  /* ---------- barra de acciones fija ---------- */
+  .barra-acciones{
+    scroll-margin-top:66px;
+    position:fixed; left:0; right:0; bottom:0; background:var(--marino);
+    border-top:1px solid rgba(255,255,255,.08); padding:12px clamp(16px,4vw,40px) 14px; z-index:30;
+  }
+  .barra-acciones .interior{
+    max-width:900px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .resumen{ flex:1 1 200px; min-width:160px; }
+  .resumen-texto{ color:rgba(255,255,255,.85); font-size:12.5px; margin-bottom:6px; }
+  .resumen-texto b{ color:#fff; }
+  .progreso-barra{ height:5px; border-radius:999px; background:rgba(255,255,255,.14); overflow:hidden; }
+  .progreso-relleno{ height:100%; background:var(--acento); border-radius:999px; width:0%; transition:width .25s; }
+
+  .btn-generar{
+    background:var(--acento); color:var(--marino); border:none;
+    font-size:13.5px; font-weight:700; padding:12px 22px; border-radius:9px; cursor:pointer;
+    white-space:nowrap; display:flex; align-items:center; gap:8px;
+  }
+  .btn-generar:hover{ filter:brightness(1.05); }
+  .btn-generar:disabled{ opacity:.55; cursor:not-allowed; }
+
+  .spinner{
+    width:14px; height:14px; border:2px solid rgba(43,40,86,.25); border-top-color:var(--marino);
+    border-radius:50%; animation:girar .8s linear infinite;
+  }
+  @keyframes girar{ to{ transform:rotate(360deg); } }
+
+  /* ---------- avisos ---------- */
+  .advertencia{
+    border:1px solid rgba(209,77,106,.4); background:rgba(209,77,106,.07); color:#9b2c2c;
+    border-radius:10px; padding:12px 14px; margin-bottom:20px; font-size:12.5px; line-height:1.6;
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .advertencia .ico{ color:var(--rojo); margin-top:1px; }
+  .advertencia strong{ display:block; margin-bottom:2px; color:var(--rojo); }
+  .advertencia.oculto{ display:none; }
+  .advertencia.info{ border-color:rgba(91,87,162,.35); background:rgba(91,87,162,.07); color:#3D3A78; }
+  .advertencia.info strong{ color:var(--azul); }
+  .advertencia.info .ico{ color:var(--azul); }
+  .advertencia ul{ margin:4px 0 0 18px; padding:0; }
+
+  .nota-pie{ text-align:center; color:var(--gris); font-size:11.5px; margin-top:6px; display:flex; align-items:center; justify-content:center; gap:6px; }
+</style>
+</head>
+<body>
+
+  <header class="app-header">
+    <h1>Registro fotográfico de items</h1>
+    <p>Fundación Memories</p>
+  </header>
+
+  <nav class="stepper" id="stepper">
+    <a href="#sec-datos" class="step" data-step="datos"><span class="step-num">1</span><span class="step-label">Datos</span></a>
+    <span class="step-sep"></span>
+    <a href="#sec-fotos" class="step" data-step="fotos"><span class="step-num">2</span><span class="step-label">Fotos</span></a>
+    <span class="step-sep"></span>
+    <a href="#sec-generar" class="step" data-step="generar"><span class="step-num">3</span><span class="step-label">Generar PDF</span></a>
+  </nav>
+
+  <main class="wrap">
+
+    <div id="advertencia" class="advertencia oculto" role="alert"></div>
+
+    <!-- ============================================================
+         DATOS DEL ENCABEZADO
+         ============================================================ -->
+    <section class="card" id="sec-datos">
+      <div class="card-head"><span class="paso">1</span><h2>Datos generales</h2></div>
+
+      <div id="lista-campos-obligatorios" class="grid-obligatorios"></div>
+
+      <div class="campo-obligatorio campo-cantidad-items" id="campo-cantidad-items">
+        <div class="campo-fila-label">
+          <label for="cantidad-items">Cantidad de items<span class="req">*</span></label>
+          <button type="button" class="ayuda-btn" data-tooltip="tt-cantidad-items" aria-label="Ayuda sobre cantidad de items">?</button>
+        </div>
+        <input id="cantidad-items" type="number" min="1" max="60" step="1" placeholder="Ej: 5" class="campo-vacio">
+        <span class="tooltip-panel" id="tt-cantidad-items">Escribe cuántos items vas a registrar. Se crean automáticamente los espacios para sus 2 fotos cada uno (en caja y fuera de caja); solo tienes que subir las fotos.</span>
+      </div>
+
+      <details class="opcionales" id="detalle-opcionales">
+        <summary>
+          <svg class="ico chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+          Datos opcionales
+        </summary>
+        <div class="contenido">
+          <div id="lista-campos-extra"></div>
+          <button type="button" class="btn-secundario" id="btn-agregar-campo">
+            <svg class="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Agregar dato
+          </button>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============================================================
+         itemS
+         ============================================================ -->
+    <section class="card" id="sec-fotos">
+      <div class="card-head"><span class="paso">2</span><h2>Fotos por item</h2></div>
+      <p class="linea-corta">
+        Cada item lleva <b>2 fotos</b>: en caja y fuera de caja.
+        <button type="button" class="ayuda-btn" data-tooltip="tt-orden">?</button>
+        <span class="tooltip-panel" id="tt-orden">En el PDF cada foto ocupa una hoja completa, en el mismo orden de esta lista: primero las 2 fotos del item 1, luego las del item 2, y así sucesivamente.</span>
+      </p>
+      <p class="linea-corta linea-mover">
+        <svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l-4 3 4 3M9 5l3-4 3 4M15 19l-3 4-3-4M19 9l4 3-4 3M1 12h22M12 1v22"/></svg>
+        ¿Quedaron en el orden equivocado? Arrastra una foto sobre otra para intercambiarlas — o tócala y luego toca el lugar donde quieres ponerla.
+      </p>
+
+      <div id="aviso-seleccion" class="aviso-seleccion oculto"></div>
+
+      <div class="items-toolbar">
+        <button type="button" class="btn-secundario" id="btn-subir-varias">
+          <svg class="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0 4 4m-4-4-4 4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+          Subir varias fotos a la vez
+        </button>
+        <button type="button" class="ayuda-btn" data-tooltip="tt-masiva" style="margin-left:6px;">?</button>
+        <span class="tooltip-panel" id="tt-masiva">Selecciona todas las fotos de una vez. Se ordenan por nombre de archivo y se acomodan en los espacios que ya tengas creados y vacíos, de arriba hacia abajo: la 1ª y 2ª en el item 1, la 3ª y 4ª en el item 2, y así — la primera de cada pareja queda "en caja" y la segunda "fuera de la caja". Solo si sobran fotos se crean items nuevos. Las fotos que ya habías cargado no se tocan y puedes corregir cualquiera después.</span>
+        <p class="ayuda-masiva">Se ordenan por nombre y llenan los espacios vacíos que ya existen.</p>
+      </div>
+
+      <div id="lista-items"></div>
+
+      <button type="button" class="btn-agregar-item" id="btn-agregar-item">
+        <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Agregar item
+      </button>
+    </section>
+
+    <p class="nota-pie">
+      <svg class="ico" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Las fotos se procesan en este navegador; no se suben a internet.
+    </p>
+  </main>
+
+  <!-- Listas de búsqueda alimentadas por la base embebida -->
+  <datalist id="dl-gestores"></datalist>
+  <datalist id="dl-ups"></datalist>
+
+
+  <!-- ============================================================
+       BARRA DE ACCIONES
+       ============================================================ -->
+  <div class="barra-acciones" id="sec-generar">
+    <div class="interior">
+      <div class="resumen">
+        <div class="resumen-texto" id="resumen-texto">0 items · 0/0 fotos</div>
+        <div class="progreso-barra"><div class="progreso-relleno" id="progreso-relleno"></div></div>
+      </div>
+      <button type="button" class="btn-generar" id="btn-generar">
+        <svg class="ico" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+        Generar PDF
+      </button>
+    </div>
+  </div>
+
+  <input type="file" id="input-masivo" accept="image/*" multiple>
+
+<!-- ==========================================================
+     BASE: gestores (nodo + nombre) y unidades productivas por
+     nodo [ID_unico, nombre, cedula]. Este archivo es público y
+     NO lleva datos personales: abierto desde la Bitácora, los
+     pide a la API con la sesión (solo los del alcance de quien
+     lo abre); la copia descargada desde la Bitácora los trae
+     incrustados aquí en lugar de null.
+     ========================================================== -->
+<script>
+window.DATOS_EP = null; /*DATOS_EP*/
+</script>
+<!-- jsPDF: misma versión que el lockfile del frontend (dependencia de
+     html2pdf.js) y con integrity del archivo publicado; si el CDN lo
+     altera, el navegador no lo ejecuta. Lo vigila tests/seguridadE1. -->
+<script src="https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js" integrity="sha384-qovJwSBbRDPP5cEjCp8S0UP66wrvnjaa60XMOGzTNanrThcrGfXfnZkvgY8N1KT3" crossorigin="anonymous"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ==============================================================
+     ICONOS (SVG en línea, sin depender de librerías externas)
+     ============================================================== */
+  const ICONS = {
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    trash: '<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/>',
+    chevronUp: '<path d="m18 15-6-6-6 6"/>',
+    chevronDown: '<path d="m6 9 6 6 6-6"/>',
+    refresh: '<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-9-9 9 9 0 0 1 9-9c2.4 0 4.6 1 6.2 2.6M21 3v6h-6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    alert: '<path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+    info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/>',
+    move: '<path d="M5 9l-4 3 4 3M9 5l3-4 3 4M15 19l-3 4-3-4M19 9l4 3-4 3M1 12h22M12 1v22"/>',
+  };
+  function svgIcon(name, size){
+    size = size || 15;
+    return '<svg class="ico" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[name] || '') + '</svg>';
+  }
+
+  /* ==============================================================
+     ESTADO
+     Se guarda todo en memoria (sin localStorage: no funciona en
+     artefactos y tampoco es necesario para esta herramienta suelta).
+     Estructura pensada para que sea fácil de portar luego a un
+     componente (por ejemplo React) del proyecto principal.
+     ============================================================== */
+  let contadorId = 1;
+  const nuevoId = () => 'id' + (contadorId++);
+
+  function isoHoy(){
+    const d = new Date();
+    const off = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - off).toISOString().slice(0, 10);
+  }
+
+  const state = {
+    // Datos fijos del encabezado: no se pueden quitar y son obligatorios
+    // para generar el PDF. "tipo" controla qué <input> se dibuja.
+    headerObligatorios: [
+      { id: 'unidadNombre', label: 'Unidad productiva', tipo: 'text', value: '',
+        placeholder: 'Escribe o elige de la lista', span2: true,
+        lista: 'dl-ups', hint: true,
+        ayuda: 'Empieza a escribir y elige la unidad productiva de la lista: se completan solos el ID y la cédula. Si no aparece, escríbela a mano.' },
+      { id: 'idUp',   label: 'ID único de la UP',  tipo: 'text', value: '',
+        placeholder: 'Igual al de la bitácora',
+        ayuda: 'El mismo código que usas en la bitácora para identificar esta unidad productiva. Si lo escribes y existe en la base, se completan solos el nombre de la UP, la cédula y el gestor.' },
+      { id: 'cedula', label: 'Cédula',            tipo: 'text', value: '',
+        placeholder: 'Sin puntos ni espacios',
+        ayuda: 'Documento de identidad de la persona responsable de la unidad productiva. Si lo escribes completo y existe en la base, se completan solos los demás datos.' },
+      { id: 'gestor', label: 'Gestor responsable', tipo: 'text', value: '',
+        placeholder: 'Nodo o nombre (ej: ATLAN4)',
+        lista: 'dl-gestores', hint: true,
+        ayuda: 'Busca por nodo o por nombre y elige de la lista. Al elegirlo, la lista de unidades productivas queda filtrada solo con las suyas. También puedes escribir un gestor que no esté en la base.' },
+      { id: 'fecha',  label: 'Fecha',              tipo: 'date', value: isoHoy(),
+        placeholder: '',
+        ayuda: 'Fecha en la que se toman las fotos.' },
+    ],
+    // Campos configurables adicionales del encabezado, opcionales.
+    headerExtra: [],
+    // Cada item: { id, nombre, caja: fotoInfo|null, fuera: fotoInfo|null }
+    // fotoInfo: { dataUrl, width, height, nombreArchivo }
+    items: [ nuevoitem() ],
+  };
+
+  function nuevoitem(){
+    return { id: nuevoId(), nombre: '', caja: null, fuera: null };
+  }
+
+  /* ==============================================================
+     UTILIDADES
+     ============================================================== */
+  function escapeHtml(str){
+    return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function estaCompleto(p){ return !!(p.caja && p.fuera); }
+
+  function fotosFaltantes(p){
+    const faltan = [];
+    if (!p.caja)  faltan.push('en caja');
+    if (!p.fuera) faltan.push('fuera de la caja');
+    return faltan;
+  }
+
+  function nombreitem(p, indice){
+    const n = (p.nombre || '').trim();
+    return n || `item ${indice + 1}`;
+  }
+
+  // "2026-03-08" -> "08/03/2026"
+  function formatearFechaCampo(iso){
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    if (!y || !m || !d) return iso;
+    return `${d}/${m}/${y}`;
+  }
+
+  // Lee un archivo de imagen, lo redimensiona si es muy grande y lo
+  // devuelve como JPEG en base64. Así todas las fotos quedan en un
+  // formato uniforme que jsPDF siempre puede incrustar, sin importar
+  // si el original era PNG, JPG, etc.
+  function procesarImagen(file){
+    return new Promise((resolve, reject) => {
+      if (!file || !file.type || file.type.indexOf('image/') !== 0) {
+        reject(new Error(`"${file ? file.name : ''}" no es una imagen.`));
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const ANCHO_MAX = 2000;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > ANCHO_MAX) { h = Math.round(h * (ANCHO_MAX / w)); w = ANCHO_MAX; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        URL.revokeObjectURL(url);
+        resolve({ dataUrl, width: w, height: h, nombreArchivo: file.name });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error(`No se pudo leer "${file.name}". Prueba con un JPG o PNG.`));
+      };
+      img.src = url;
+    });
+  }
+
+  /* ==============================================================
+     AYUDA BAJO DEMANDA (tooltips con botón "?")
+     Un solo listener delegado para toda la página: abre/cierra el
+     panel correspondiente y cierra cualquier otro que esté abierto.
+     ============================================================== */
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ayuda-btn');
+    document.querySelectorAll('.tooltip-panel.visible').forEach((panel) => {
+      if (!btn || panel.id !== btn.dataset.tooltip) panel.classList.remove('visible');
+    });
+    if (btn) {
+      const panel = document.getElementById(btn.dataset.tooltip);
+      if (panel) panel.classList.toggle('visible');
+    }
+  });
+
+  /* ==============================================================
+     RENDER — CAMPOS OBLIGATORIOS DEL ENCABEZADO
+     ============================================================== */
+  const $listaObligatorios = document.getElementById('lista-campos-obligatorios');
+
+  function renderCamposObligatorios(){
+    $listaObligatorios.innerHTML = state.headerObligatorios.map((c) => `
+      <div class="campo-obligatorio${c.span2 ? ' span2' : ''}" data-ob-id="${c.id}">
+        <div class="campo-fila-label">
+          <label for="ob-${c.id}">${escapeHtml(c.label)}<span class="req">*</span></label>
+          <button type="button" class="ayuda-btn" data-tooltip="tt-${c.id}" aria-label="Ayuda sobre ${escapeHtml(c.label)}">?</button>
+        </div>
+        <input id="ob-${c.id}" type="${c.tipo}" data-ob-id="${c.id}" placeholder="${escapeHtml(c.placeholder)}"
+               value="${escapeHtml(c.value)}" ${c.value ? '' : 'class="campo-vacio"'}
+               ${c.lista ? `list="${c.lista}" autocomplete="off"` : ''}>
+        ${c.hint ? `<div class="campo-hint oculto" id="hint-${c.id}"></div>` : ''}
+        <span class="tooltip-panel" id="tt-${c.id}">${escapeHtml(c.ayuda)}</span>
+      </div>
+    `).join('');
+  }
+
+  $listaObligatorios.addEventListener('input', (e) => {
+    const id = e.target.dataset.obId;
+    if (!id) return;
+    const campo = state.headerObligatorios.find((c) => c.id === id);
+    if (!campo) return;
+    campo.value = e.target.value;
+    e.target.classList.toggle('campo-vacio', !e.target.value.trim());
+    actualizarStepper();
+  });
+
+  /* ==============================================================
+     RENDER — CAMPOS ADICIONALES (OPCIONALES)
+     ============================================================== */
+  const $listaExtra = document.getElementById('lista-campos-extra');
+  const $detalleOpcionales = document.getElementById('detalle-opcionales');
+
+  function renderCamposExtra(){
+    if (state.headerExtra.length === 0) {
+      $listaExtra.innerHTML = `<p class="vacio-opcionales">Aún no has agregado ninguno. Un campo vacío no se imprime en el PDF.</p>`;
+      return;
+    }
+    $listaExtra.innerHTML = state.headerExtra.map((c) => `
+      <div class="campo-fila" data-campo-id="${c.id}">
+        <input type="text" class="campo-label" data-rol="label" placeholder="Nombre del campo" value="${escapeHtml(c.label)}">
+        <input type="text" data-rol="value" placeholder="Valor" value="${escapeHtml(c.value)}">
+        <button type="button" class="btn-quitar-campo" data-accion="quitar-campo" title="Quitar campo" aria-label="Quitar campo">${svgIcon('x', 15)}</button>
+      </div>
+    `).join('');
+  }
+
+  $listaExtra.addEventListener('input', (e) => {
+    const fila = e.target.closest('.campo-fila');
+    if (!fila) return;
+    const campo = state.headerExtra.find((c) => c.id === fila.dataset.campoId);
+    if (!campo) return;
+    const rol = e.target.dataset.rol;
+    if (rol === 'label') campo.label = e.target.value;
+    if (rol === 'value') campo.value = e.target.value;
+  });
+
+  $listaExtra.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-accion="quitar-campo"]');
+    if (!btn) return;
+    const fila = btn.closest('.campo-fila');
+    state.headerExtra = state.headerExtra.filter((c) => c.id !== fila.dataset.campoId);
+    renderCamposExtra();
+  });
+
+  document.getElementById('btn-agregar-campo').addEventListener('click', () => {
+    $detalleOpcionales.open = true;
+    state.headerExtra.push({ id: nuevoId(), label: '', value: '' });
+    renderCamposExtra();
+    const filas = $listaExtra.querySelectorAll('.campo-fila input.campo-label');
+    filas[filas.length - 1]?.focus();
+  });
+
+  /* ==============================================================
+     RENDER — itemS
+     ============================================================== */
+  const $listaitems = document.getElementById('lista-items');
+  const $cantidaditems = document.getElementById('cantidad-items');
+  const $advertencia = document.getElementById('advertencia');
+
+  // Foto actualmente "elegida" con un toque (alternativa a arrastrar,
+  // pensada para pantallas táctiles donde arrastrar es más difícil).
+  let seleccionActual = null; // { itemId, tipo } | null
+
+  function esLaSeleccionada(itemId, tipo){
+    return !!seleccionActual && seleccionActual.itemId === itemId && seleccionActual.tipo === tipo;
+  }
+
+  function dropzoneHTML(p, tipo, etiqueta, icono){
+    const foto = p[tipo];
+    const esSeleccionada = esLaSeleccionada(p.id, tipo);
+    const esDestinoPosible = !!seleccionActual && !esSeleccionada;
+    if (foto) {
+      const clases = 'dropzone con-foto' + (esSeleccionada ? ' seleccionada' : '') + (esDestinoPosible ? ' zona-destino' : '');
+      return `
+        <div class="${clases}" draggable="true" data-item-id="${p.id}" data-tipo="${tipo}" data-accion="seleccionar-foto">
+          <div class="handle-mover">${svgIcon('move', 12)}</div>
+          <img src="${foto.dataUrl}" alt="${escapeHtml(etiqueta)}">
+          <div class="foto-overlay">
+            <span class="chip">${escapeHtml(foto.nombreArchivo || etiqueta)}</span>
+            <div class="acciones">
+              <button type="button" class="cambiar" data-accion="cambiar-foto" data-item-id="${p.id}" data-tipo="${tipo}" title="Cambiar foto" aria-label="Cambiar foto">${svgIcon('refresh', 13)}</button>
+              <button type="button" data-accion="quitar-foto" data-item-id="${p.id}" data-tipo="${tipo}" title="Quitar foto" aria-label="Quitar foto">${svgIcon('x', 13)}</button>
+            </div>
+          </div>
+        </div>`;
+    }
+    const clases = 'dropzone' + (esDestinoPosible ? ' zona-destino' : '');
+    const texto = esDestinoPosible ? 'Toca aquí para traer la foto elegida' : 'Toca o arrastra aquí';
+    return `
+      <div class="${clases}" data-item-id="${p.id}" data-tipo="${tipo}" data-accion="click-subir">
+        <div class="icono">${icono}</div>
+        <div class="txt-principal">${escapeHtml(etiqueta)}</div>
+        <div class="txt-secundario">${texto}</div>
+      </div>`;
+  }
+
+  // Intercambia el contenido de dos casillas de foto (pueden ser del
+  // mismo item o de items distintos, y de cualquier tipo).
+  // Si una de las dos está vacía, esto funciona como "mover".
+  function intercambiarFotos(origen, destino){
+    if (origen.itemId === destino.itemId && origen.tipo === destino.tipo) return;
+    const pOrigen = state.items.find((p) => p.id === origen.itemId);
+    const pDestino = state.items.find((p) => p.id === destino.itemId);
+    if (!pOrigen || !pDestino) return;
+    const temp = pDestino[destino.tipo];
+    pDestino[destino.tipo] = pOrigen[origen.tipo];
+    pOrigen[origen.tipo] = temp;
+  }
+
+  function actualizarAvisoSeleccion(){
+    const $aviso = document.getElementById('aviso-seleccion');
+    if (!seleccionActual) { $aviso.classList.add('oculto'); $aviso.innerHTML = ''; return; }
+    $aviso.classList.remove('oculto');
+    $aviso.innerHTML = `${svgIcon('move', 14)} Foto elegida — toca otro lugar para moverla ahí.
+      <button type="button" id="btn-cancelar-seleccion">Cancelar</button>`;
+    document.getElementById('btn-cancelar-seleccion').addEventListener('click', () => {
+      seleccionActual = null;
+      renderitems();
+    });
+  }
+
+  function renderitems(){
+    if (state.items.length === 0) {
+      $listaitems.innerHTML = `<div class="vacio">Todavía no hay items. Agrega el primero abajo o sube varias fotos a la vez.</div>`;
+    } else {
+      $listaitems.innerHTML = state.items.map((p, i) => {
+        const completo = estaCompleto(p);
+        const pillTexto = completo ? 'Completo' : (fotosFaltantes(p).length === 2 ? 'Faltan las 2 fotos' : 'Falta 1 foto');
+        return `
+        <div class="item" data-item-id="${p.id}">
+          <div class="item-cabecera">
+            <div class="item-num">${i + 1}</div>
+            <input type="text" class="item-nombre" data-accion="nombre-item" data-item-id="${p.id}"
+                   placeholder="Nombre del item (opcional)" value="${escapeHtml(p.nombre)}">
+            <span class="estado-pill ${completo ? 'estado-ok' : 'estado-falta'}">
+              ${svgIcon(completo ? 'check' : 'alert', 12)} ${pillTexto}
+            </span>
+            <div class="item-controles">
+              <button type="button" class="btn-icono" data-accion="mover-arriba" data-item-id="${p.id}" title="Mover arriba" aria-label="Mover arriba" ${i === 0 ? 'disabled' : ''}>${svgIcon('chevronUp', 14)}</button>
+              <button type="button" class="btn-icono" data-accion="mover-abajo" data-item-id="${p.id}" title="Mover abajo" aria-label="Mover abajo" ${i === state.items.length - 1 ? 'disabled' : ''}>${svgIcon('chevronDown', 14)}</button>
+              <button type="button" class="btn-icono peligro" data-accion="eliminar-item" data-item-id="${p.id}" title="Eliminar item" aria-label="Eliminar item">${svgIcon('trash', 14)}</button>
+            </div>
+          </div>
+          <div class="fotos-grid">
+            <div>
+              <span class="dropzone-label">1 · En caja</span>
+              ${dropzoneHTML(p, 'caja', 'Foto en caja', '📦')}
+            </div>
+            <div>
+              <span class="dropzone-label">2 · Fuera de la caja</span>
+              ${dropzoneHTML(p, 'fuera', 'Foto fuera de la caja', '🖼')}
+            </div>
+          </div>
+          <input type="file" accept="image/*" class="input-archivo" data-item-id="${p.id}" data-tipo="caja">
+          <input type="file" accept="image/*" class="input-archivo" data-item-id="${p.id}" data-tipo="fuera">
+        </div>`;
+      }).join('');
+
+      // Conecta cada input[type=file] oculto con su item/tipo.
+      state.items.forEach((p) => {
+        const cont = $listaitems.querySelector(`.item[data-item-id="${p.id}"]`);
+        cont.querySelectorAll('.input-archivo').forEach((input) => {
+          input.addEventListener('change', (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (file) manejarNuevaFoto(p.id, input.dataset.tipo, file);
+            e.target.value = '';
+          });
+        });
+      });
+    }
+    actualizarAvisoSeleccion();
+    $cantidaditems.value = state.items.length || '';
+    $cantidaditems.classList.toggle('campo-vacio', !state.items.length);
+    renderResumen();
+  }
+
+  async function manejarNuevaFoto(itemId, tipo, file){
+    const item = state.items.find((p) => p.id === itemId);
+    if (!item) return;
+    try {
+      const info = await procesarImagen(file);
+      item[tipo] = info;
+      renderitems();
+    } catch (err) {
+      alert(err.message || 'No se pudo cargar la foto.');
+    }
+  }
+
+  function abrirSelector(itemId, tipo){
+    const cont = $listaitems.querySelector(`.item[data-item-id="${itemId}"]`);
+    const input = cont && cont.querySelector(`.input-archivo[data-tipo="${tipo}"]`);
+    if (input) input.click();
+  }
+
+  // Delegación de eventos para toda la lista de items.
+  $listaitems.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-accion]');
+    if (!btn) return;
+    const accion = btn.dataset.accion;
+    const itemId = btn.dataset.itemId;
+    const tipo = btn.dataset.tipo;
+
+    // Foto ya elegida y el usuario toca otra casilla: se intercambian.
+    if (seleccionActual && (accion === 'seleccionar-foto' || accion === 'click-subir')) {
+      if (seleccionActual.itemId === itemId && seleccionActual.tipo === tipo) {
+        seleccionActual = null; // tocar la misma foto cancela la elección
+      } else {
+        intercambiarFotos(seleccionActual, { itemId, tipo });
+        seleccionActual = null;
+      }
+      renderitems();
+      return;
+    }
+
+    if (accion === 'seleccionar-foto') {
+      seleccionActual = { itemId, tipo };
+      renderitems();
+      return;
+    }
+    if (accion === 'click-subir') {
+      abrirSelector(itemId, tipo);
+      return;
+    }
+    if (accion === 'cambiar-foto') {
+      abrirSelector(itemId, tipo);
+      return;
+    }
+    if (accion === 'quitar-foto') {
+      const p = state.items.find((x) => x.id === itemId);
+      if (p) { p[tipo] = null; renderitems(); }
+      return;
+    }
+    if (accion === 'mover-arriba' || accion === 'mover-abajo') {
+      const idx = state.items.findIndex((x) => x.id === itemId);
+      const destino = accion === 'mover-arriba' ? idx - 1 : idx + 1;
+      if (destino < 0 || destino >= state.items.length) return;
+      const [item] = state.items.splice(idx, 1);
+      state.items.splice(destino, 0, item);
+      renderitems();
+      return;
+    }
+    if (accion === 'eliminar-item') {
+      const p = state.items.find((x) => x.id === itemId);
+      const nombre = p ? nombreitem(p, state.items.indexOf(p)) : 'este item';
+      if (confirm(`¿Eliminar "${nombre}" y sus fotos?`)) {
+        if (seleccionActual && seleccionActual.itemId === itemId) seleccionActual = null;
+        state.items = state.items.filter((x) => x.id !== itemId);
+        renderitems();
+      }
+      return;
+    }
+  });
+
+  $listaitems.addEventListener('input', (e) => {
+    if (e.target.dataset.accion === 'nombre-item') {
+      const p = state.items.find((x) => x.id === e.target.dataset.itemId);
+      if (p) p.nombre = e.target.value;
+      renderResumen();
+    }
+  });
+
+  // Arrastrar una foto propia para intercambiarla de lugar con otra.
+  let arrastreOrigen = null; // { itemId, tipo } | null mientras se arrastra
+
+  $listaitems.addEventListener('dragstart', (e) => {
+    const zona = e.target.closest('.dropzone.con-foto');
+    if (!zona) { e.preventDefault(); return; }
+    seleccionActual = null; // el arrastre reemplaza cualquier elección por toque
+    arrastreOrigen = { itemId: zona.dataset.itemId, tipo: zona.dataset.tipo };
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', 'mover-foto'); } catch (err) { /* Safari a veces falla, no es grave */ }
+    zona.classList.add('arrastrando');
+  });
+
+  $listaitems.addEventListener('dragend', () => {
+    arrastreOrigen = null;
+    $listaitems.querySelectorAll('.arrastrando, .dragover, .dragover-swap')
+      .forEach((z) => z.classList.remove('arrastrando', 'dragover', 'dragover-swap'));
+  });
+
+  // Arrastrar y soltar sobre cualquier dropzone: puede ser un archivo
+  // nuevo desde el computador, o una de nuestras propias fotos (arrastreOrigen).
+  ['dragover', 'dragleave', 'drop'].forEach((tipoEvento) => {
+    $listaitems.addEventListener(tipoEvento, (e) => {
+      const zona = e.target.closest('.dropzone');
+      if (!zona) return;
+      if (tipoEvento === 'dragover') {
+        e.preventDefault();
+        zona.classList.add(arrastreOrigen ? 'dragover-swap' : 'dragover');
+      } else if (tipoEvento === 'dragleave') {
+        zona.classList.remove('dragover', 'dragover-swap');
+      } else if (tipoEvento === 'drop') {
+        e.preventDefault();
+        zona.classList.remove('dragover', 'dragover-swap');
+        if (arrastreOrigen) {
+          intercambiarFotos(arrastreOrigen, { itemId: zona.dataset.itemId, tipo: zona.dataset.tipo });
+          arrastreOrigen = null;
+          renderitems();
+          return;
+        }
+        const file = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) manejarNuevaFoto(zona.dataset.itemId, zona.dataset.tipo, file);
+      }
+    });
+  }, false);
+
+  document.getElementById('btn-agregar-item').addEventListener('click', () => {
+    state.items.push(nuevoitem());
+    renderitems();
+    $listaitems.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  $cantidaditems.addEventListener('input', () => {
+    $cantidaditems.classList.toggle('campo-vacio', !$cantidaditems.value.trim());
+  });
+
+  $cantidaditems.addEventListener('change', () => {
+    const bruto = $cantidaditems.value;
+    let n = parseInt(bruto, 10);
+    if (isNaN(n) || n < 0) n = 0;
+    if (n > 60) n = 60;
+    const actual = state.items.length;
+
+    if (n > actual) {
+      for (let i = actual; i < n; i++) state.items.push(nuevoitem());
+      renderitems();
+      $listaitems.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else if (n < actual) {
+      const sobrantes = state.items.slice(n);
+      const conDatos = sobrantes.some((p) => p.nombre || p.caja || p.fuera);
+      if (conDatos && !confirm(`Vas a reducir a ${n} item${n === 1 ? '' : 's'}. Se eliminarán ${sobrantes.length} item(s) con datos o fotos ya cargadas. ¿Continuar?`)) {
+        $cantidaditems.value = actual;
+        return;
+      }
+      state.items = state.items.slice(0, n);
+      renderitems();
+    }
+  });
+
+  /* ==============================================================
+     SUBIDA MASIVA (varias fotos a la vez)
+     Se ordenan alfabéticamente por nombre de archivo y se van
+     acomodando en los espacios que YA existen y están vacíos, en
+     orden (item 1 en caja, item 1 fuera, item 2 en
+     caja, …). Solo cuando ya no quedan espacios libres se crean
+     items nuevos, de a 2 fotos cada uno.
+     ============================================================== */
+  const $inputMasivo = document.getElementById('input-masivo');
+  const $btnSubirVarias = document.getElementById('btn-subir-varias');
+
+  $btnSubirVarias.addEventListener('click', () => $inputMasivo.click());
+
+  function ponerTextoBotonMasivo(txt){
+    $btnSubirVarias.lastChild.textContent = ' ' + txt;
+  }
+
+  $inputMasivo.addEventListener('change', async (e) => {
+    const archivos = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (archivos.length === 0) return;
+    seleccionActual = null;
+
+    archivos.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+    $btnSubirVarias.disabled = true;
+    ponerTextoBotonMasivo(`Procesando ${archivos.length} foto${archivos.length === 1 ? '' : 's'}…`);
+
+    const resultados = await Promise.allSettled(archivos.map(procesarImagen));
+    const exitosos = [];
+    const fallidos = [];
+    resultados.forEach((r, i) => {
+      if (r.status === 'fulfilled') exitosos.push(r.value);
+      else fallidos.push(archivos[i].name);
+    });
+
+    // 1) Se llenan primero los espacios vacíos que ya existen, en
+    //    orden, sin tocar las fotos que el gestor ya había cargado.
+    let cursor = 0;
+    for (const p of state.items) {
+      for (const tipo of ['caja', 'fuera']) {
+        if (cursor >= exitosos.length) break;
+        if (!p[tipo]) { p[tipo] = exitosos[cursor++]; }
+      }
+      if (cursor >= exitosos.length) break;
+    }
+    const usadasEnExistentes = cursor;
+
+    // 2) Lo que sobre arma items nuevos, de a 2 fotos.
+    const nuevos = [];
+    for (let i = cursor; i < exitosos.length; i += 2) {
+      const p = nuevoitem();
+      p.caja = exitosos[i];
+      if (exitosos[i + 1]) p.fuera = exitosos[i + 1];
+      nuevos.push(p);
+    }
+    if (nuevos.length) state.items = state.items.concat(nuevos);
+
+    renderitems();
+    $listaitems.lastElementChild?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    if (fallidos.length) {
+      alert(`No se pudieron cargar ${fallidos.length} archivo(s):\n${fallidos.join('\n')}`);
+    }
+    const huecos = state.items.reduce((n, p) => n + (p.caja ? 0 : 1) + (p.fuera ? 0 : 1), 0);
+    if (huecos > 0 && exitosos.length > 0) {
+      mostrarAviso('info', 'Aviso', `Se cargaron ${exitosos.length} foto${exitosos.length === 1 ? '' : 's'}${usadasEnExistentes ? ` (${usadasEnExistentes} en los espacios que ya estaban creados)` : ''}. Todavía quedan ${huecos} espacio${huecos === 1 ? '' : 's'} sin foto.`);
+    }
+
+    $btnSubirVarias.disabled = false;
+    ponerTextoBotonMasivo('Subir varias fotos a la vez');
+  });
+
+  /* ==============================================================
+     RESUMEN, PROGRESO Y PASOS
+     ============================================================== */
+  const $stepDatos = document.querySelector('.step[data-step="datos"]');
+  const $stepFotos = document.querySelector('.step[data-step="fotos"]');
+
+  function actualizarStepper(){
+    const datosOk = state.headerObligatorios.every((c) => c.value && String(c.value).trim())
+      && $cantidaditems.value && String($cantidaditems.value).trim();
+    const fotosOk = state.items.length > 0 && state.items.every(estaCompleto);
+    $stepDatos.classList.toggle('completo', datosOk);
+    $stepFotos.classList.toggle('completo', fotosOk);
+  }
+
+  function renderResumen(){
+    const total = state.items.length;
+    const fotos = state.items.reduce((n, p) => n + (p.caja ? 1 : 0) + (p.fuera ? 1 : 0), 0);
+    const totalFotos = total * 2;
+    const $r = document.getElementById('resumen-texto');
+    $r.innerHTML = `<b>${total}</b> item${total === 1 ? '' : 's'} · <b>${fotos}/${totalFotos}</b> fotos`;
+    const $barra = document.getElementById('progreso-relleno');
+    $barra.style.width = (totalFotos ? Math.round((fotos / totalFotos) * 100) : 0) + '%';
+    actualizarStepper();
+  }
+
+  /* ==============================================================
+     AVISOS Y VALIDACIÓN
+     ============================================================== */
+  function mostrarAviso(tipo, titulo, contenidoHtml){
+    $advertencia.classList.remove('oculto', 'info');
+    if (tipo === 'info') $advertencia.classList.add('info');
+    $advertencia.innerHTML = `${svgIcon(tipo === 'info' ? 'info' : 'alert', 17)}<div><strong>${escapeHtml(titulo)}</strong>${contenidoHtml}</div>`;
+    $advertencia.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function ocultarAdvertencia(){ $advertencia.classList.add('oculto'); }
+
+  function validarTodo(){
+    const camposFaltantes = state.headerObligatorios.filter((c) => !c.value || !String(c.value).trim());
+    const cantidadVacia = !$cantidaditems.value || !String($cantidaditems.value).trim();
+    const incompletos = state.items.filter((p) => !estaCompleto(p));
+    return { camposFaltantes, cantidadVacia, incompletos };
+  }
+
+  function mostrarErroresValidacion({ camposFaltantes, cantidadVacia, incompletos }){
+    let partes = [];
+    if (camposFaltantes.length || cantidadVacia) {
+      const items = camposFaltantes.map((c) => `<li>${escapeHtml(c.label)}</li>`);
+      if (cantidadVacia) items.push('<li>Cantidad de items</li>');
+      partes.push(`<div><strong>Faltan datos generales</strong><ul>${items.join('')}</ul></div>`);
+      renderCamposObligatorios(); // resalta en rojo los campos vacíos
+      $cantidaditems.classList.toggle('campo-vacio', cantidadVacia);
+    }
+    if (state.items.length === 0) {
+      partes.push(`<div><strong>No hay items</strong>Agrega al menos un item con sus 2 fotos.</div>`);
+    } else if (incompletos.length) {
+      const items = incompletos.map((p) => {
+        const idx = state.items.indexOf(p);
+        return `<li>${escapeHtml(nombreitem(p, idx))} — falta foto ${fotosFaltantes(p).join(' y ')}</li>`;
+      }).join('');
+      partes.push(`<div><strong>Faltan fotos</strong><ul>${items}</ul></div>`);
+    }
+    $advertencia.classList.remove('oculto', 'info');
+    $advertencia.innerHTML = svgIcon('alert', 17) + '<div>' + partes.join('') + '</div>';
+    $advertencia.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ==============================================================
+     GENERACIÓN DEL PDF (jsPDF puro: 1 foto = 1 hoja completa)
+     ============================================================== */
+  const COLOR_MARINO = [61, 58, 120];
+  const COLOR_ACENTO = [245, 164, 136];
+  const COLOR_GRIS   = [142, 138, 166];
+  const COLOR_BORDE  = [226, 222, 236];
+
+  function valorParaMostrar(campo){
+    if (campo.tipo === 'date') return formatearFechaCampo(campo.value);
+    return campo.value.trim();
+  }
+
+  function construirNombreArchivo(){
+    const idUp = state.headerObligatorios.find((c) => c.id === 'idUp');
+    const base = (idUp && idUp.value.trim()) || 'items';
+    const limpio = base.replace(/[^a-zA-Z0-9 _-]/g, '').trim().replace(/\s+/g, '_') || 'items';
+    const ts = new Date();
+    const sello = `${ts.getFullYear()}${String(ts.getMonth() + 1).padStart(2, '0')}${String(ts.getDate()).padStart(2, '0')}`;
+    return `Registro_Fotografico_${limpio}_${sello}.pdf`;
+  }
+
+  function dibujarPagina(doc, geo, pagina){
+    const { pageW, pageH, mX, mTop, mBottom } = geo;
+    const { nombreProd, etiquetaTipo, foto, numero, total } = pagina;
+    let y = mTop;
+
+    // --- Eyebrow + título ---
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(...COLOR_GRIS);
+    doc.text('FUNDACIÓN MEMORIES', mX, y);
+    y += 5.5;
+    doc.setFontSize(14);
+    doc.setTextColor(...COLOR_MARINO);
+    doc.text('Registro fotográfico de items', mX, y);
+
+    // --- Campos del encabezado, alineados a la derecha ---
+    let yR = mTop;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...COLOR_GRIS);
+    const camposMostrar = [
+      ...state.headerObligatorios.map((c) => ({ label: c.label, valor: valorParaMostrar(c) })),
+      ...state.headerExtra.map((c) => ({ label: (c.label || '').trim(), valor: (c.value || '').trim() })),
+    ].filter((c) => c.label && c.valor);
+
+    camposMostrar.forEach((c) => {
+      doc.text(`${c.label}: ${c.valor}`, pageW - mX, yR, { align: 'right' });
+      yR += 4.2;
+    });
+
+    y = Math.max(y + 3, yR) + 2;
+    doc.setDrawColor(...COLOR_MARINO);
+    doc.setLineWidth(0.6);
+    doc.line(mX, y, pageW - mX, y);
+    y += 8;
+
+    // --- Título del item + insignia (en caja / fuera de caja) ---
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(...COLOR_MARINO);
+    doc.text(nombreProd, mX, y + 3.2);
+
+    doc.setFontSize(9);
+    const anchoBadge = doc.getTextWidth(etiquetaTipo) + 11;
+    doc.setFillColor(...COLOR_ACENTO);
+    doc.roundedRect(pageW - mX - anchoBadge, y - 3.2, anchoBadge, 7.4, 3.5, 3.5, 'F');
+    doc.setTextColor(...COLOR_MARINO);
+    doc.text(etiquetaTipo, pageW - mX - anchoBadge / 2, y + 1.5, { align: 'center' });
+
+    y += 10;
+
+    // --- Área de la imagen (ocupa el resto de la hoja) ---
+    const areaTop = y;
+    const areaBottom = pageH - mBottom - 12;
+    const areaLeft = mX, areaRight = pageW - mX;
+    const areaW = areaRight - areaLeft, areaH = areaBottom - areaTop;
+
+    doc.setDrawColor(...COLOR_BORDE);
+    doc.setLineWidth(0.3);
+    doc.rect(areaLeft, areaTop, areaW, areaH);
+
+    const ratioImg = foto.width / foto.height;
+    const ratioArea = areaW / areaH;
+    let w, h;
+    if (ratioImg > ratioArea) { w = areaW; h = w / ratioImg; }
+    else { h = areaH; w = h * ratioImg; }
+    const xImg = areaLeft + (areaW - w) / 2;
+    const yImg = areaTop + (areaH - h) / 2;
+    doc.addImage(foto.dataUrl, 'JPEG', xImg, yImg, w, h);
+
+    // --- Pie de página ---
+    const yFooter = pageH - mBottom + 3;
+    doc.setDrawColor(...COLOR_BORDE);
+    doc.setLineWidth(0.3);
+    doc.line(mX, yFooter - 5, pageW - mX, yFooter - 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...COLOR_GRIS);
+    doc.text('Fundación Memories', mX, yFooter);
+    doc.text(`Página ${numero} de ${total}`, pageW - mX, yFooter, { align: 'right' });
+  }
+
+  function generarPDF(){
+    const { camposFaltantes, cantidadVacia, incompletos } = validarTodo();
+    if (camposFaltantes.length || cantidadVacia || state.items.length === 0 || incompletos.length) {
+      mostrarErroresValidacion({ camposFaltantes, cantidadVacia, incompletos });
+      return;
+    }
+    ocultarAdvertencia();
+
+    const $btn = document.getElementById('btn-generar');
+    $btn.disabled = true;
+    $btn.innerHTML = `<span class="spinner"></span> Generando…`;
+
+    // Pequeña espera para que el navegador pinte el estado "cargando"
+    // antes del trabajo síncrono de dibujar el PDF.
+    setTimeout(() => {
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait', compress: true });
+        const geo = {
+          pageW: doc.internal.pageSize.getWidth(),
+          pageH: doc.internal.pageSize.getHeight(),
+          mX: 12, mTop: 16, mBottom: 16,
+        };
+
+        const paginas = [];
+        state.items.forEach((p, i) => {
+          const nombreProd = nombreitem(p, i);
+          paginas.push({ nombreProd, etiquetaTipo: 'EN CAJA', foto: p.caja });
+          paginas.push({ nombreProd, etiquetaTipo: 'FUERA DE LA CAJA', foto: p.fuera });
+        });
+
+        paginas.forEach((pg, idx) => {
+          if (idx > 0) doc.addPage();
+          dibujarPagina(doc, geo, { ...pg, numero: idx + 1, total: paginas.length });
+        });
+
+        doc.save(construirNombreArchivo());
+      } catch (err) {
+        console.error('[registro-fotografico] Error al generar el PDF:', err);
+        alert('No se pudo generar el PDF. Intenta de nuevo.');
+      } finally {
+        $btn.disabled = false;
+        $btn.innerHTML = `${svgIcon('check', 15)} Generar PDF`;
+      }
+    }, 30);
+  }
+
+  document.getElementById('btn-generar').addEventListener('click', generarPDF);
+
+  /* ==============================================================
+     BASE DE DATOS — GESTORES Y UNIDADES PRODUCTIVAS
+     Vienen de window.DATOS_EP (copia descargada desde la Bitácora)
+     o, si no, de la API de la Bitácora con la sesión abierta
+     (GET <api>/registro-fotografico). Aquí se arman los índices y
+     los <datalist> de búsqueda.
+
+     Regla: la base SOLO sugiere y autocompleta. Cualquier casilla
+     se puede seguir escribiendo o corrigiendo a mano; nada se
+     bloquea y nada se vuelve a sobrescribir si el gestor lo editó.
+     ============================================================== */
+  let DATOS = { gestores: [], ups: {} };
+
+  const $dlGestores = document.getElementById('dl-gestores');
+  const $dlUps = document.getElementById('dl-ups');
+
+  const norm = (s) => String(s ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+  const soloDigitos = (s) => String(s ?? '').replace(/\D/g, '');
+
+  // "ATLAN4 — OSCAR JAVIER POLO CERVANTE"
+  const etiquetaGestor = (nodo, nombre) => nodo + ' — ' + nombre;
+
+  const nombrePorNodo = new Map();          // ATLAN4 -> OSCAR ...
+  const nodoPorEtiqueta = new Map();        // etiqueta normalizada -> ATLAN4
+  const TODAS_UPS = [];                     // lista plana de UP: { id, nombre, cedula, nodo }
+  const upPorId = new Map();
+  const upsPorCedula = new Map();
+
+  // Arma los índices con la base recibida (se puede llamar de nuevo si llega otra).
+  function indexarBase(datos){
+    DATOS = {
+      gestores: Array.isArray(datos && datos.gestores) ? datos.gestores : [],
+      ups: datos && datos.ups && typeof datos.ups === 'object' ? datos.ups : {},
+    };
+    nombrePorNodo.clear(); nodoPorEtiqueta.clear(); upPorId.clear(); upsPorCedula.clear();
+    TODAS_UPS.length = 0;
+    DATOS.gestores.forEach(([nodo, nombre]) => {
+      nombrePorNodo.set(nodo, nombre);
+      nodoPorEtiqueta.set(norm(etiquetaGestor(nodo, nombre)), nodo);
+      nodoPorEtiqueta.set(norm(nodo), nodo);
+      if (!nodoPorEtiqueta.has(norm(nombre))) nodoPorEtiqueta.set(norm(nombre), nodo);
+    });
+    Object.keys(DATOS.ups).forEach((nodo) => {
+      (DATOS.ups[nodo] || []).forEach(([id, nombre, cedula]) => {
+        TODAS_UPS.push({ id, nombre, cedula, nodo });
+      });
+    });
+    TODAS_UPS.forEach((up) => {
+      if (up.id) upPorId.set(norm(up.id), up);
+      if (up.cedula) {
+        if (!upsPorCedula.has(up.cedula)) upsPorCedula.set(up.cedula, []);
+        upsPorCedula.get(up.cedula).push(up);
+      }
+    });
+  }
+
+  // Base de la API: la que indique ?api= (solo rutas del mismo sitio) o /api.
+  function baseApi(){
+    const pedida = new URLSearchParams(location.search).get('api') || '';
+    return /^\/[^/\\]/.test(pedida) ? pedida.replace(/\/+$/, '') : '/api';
+  }
+
+  // Pide la base a la Bitácora con la sesión del navegador. Sin sesión (o abierto
+  // como archivo) la herramienta sigue funcionando: las casillas se escriben a mano.
+  function cargarBaseDeLaApi(){
+    if (!/^https?:$/.test(location.protocol)) return;
+    setHint('unidadNombre', 'Cargando la base de la Bitácora…');
+    fetch(baseApi() + '/registro-fotografico', { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((j) => { indexarBase(j && j.item); iniciarBaseDatos(); })
+      .catch(() => setHint('unidadNombre',
+        'No se pudo traer la base: abre la herramienta desde la Bitácora con tu sesión iniciada. Puedes escribir los datos a mano.', 'aviso'));
+  }
+
+  let nodoActual = '';                      // gestor seleccionado (si lo hay)
+  let upsVisibles = [];                     // UP que hoy alimentan el datalist
+  let upPorTextoUp = new Map();             // texto de la opción -> UP
+
+  function listaUpsDe(nodo){
+    if (nodo && DATOS.ups[nodo]) {
+      return DATOS.ups[nodo].map(([id, nombre, cedula]) => ({ id, nombre, cedula, nodo }));
+    }
+    return TODAS_UPS;
+  }
+
+  // Arma el <datalist> de unidades productivas. Si dos UP del mismo
+  // gestor se llaman igual, se les agrega el ID para poder elegir
+  // una u otra sin ambigüedad.
+  function renderDatalistUps(){
+    upsVisibles = listaUpsDe(nodoActual);
+    upPorTextoUp = new Map();
+    const usados = new Map();
+    const partes = [];
+    const limite = 8000;
+    upsVisibles.slice(0, limite).forEach((up) => {
+      let texto = up.nombre;
+      const veces = (usados.get(norm(texto)) || 0) + 1;
+      usados.set(norm(texto), veces);
+      if (veces > 1) texto = up.nombre + ' [ID ' + up.id + ']';
+      upPorTextoUp.set(norm(texto), up);
+      const detalle = 'ID ' + up.id + (up.cedula ? ' · CC ' + up.cedula : '') +
+                      (nodoActual ? '' : ' · ' + up.nodo);
+      partes.push('<option value="' + escapeHtml(texto) + '">' + escapeHtml(detalle) + '</option>');
+    });
+    $dlUps.innerHTML = partes.join('');
+  }
+
+  function renderDatalistGestores(){
+    $dlGestores.innerHTML = DATOS.gestores.map(([nodo, nombre]) => {
+      const n = (DATOS.ups[nodo] || []).length;
+      return '<option value="' + escapeHtml(etiquetaGestor(nodo, nombre)) + '">' +
+             n + (n === 1 ? ' unidad productiva' : ' unidades productivas') + '</option>';
+    }).join('');
+  }
+
+  /* --- utilidades para escribir en las casillas sin re-render ---- */
+  function inputDe(id){ return document.getElementById('ob-' + id); }
+
+  function setValor(id, valor){
+    const campo = state.headerObligatorios.find((c) => c.id === id);
+    if (!campo) return;
+    campo.value = valor;
+    const inp = inputDe(id);
+    if (inp) {
+      inp.value = valor;
+      inp.classList.toggle('campo-vacio', !String(valor).trim());
+      inp.classList.add('campo-autocompletado');
+      setTimeout(() => inp.classList.remove('campo-autocompletado'), 1200);
+    }
+    actualizarStepper();
+  }
+
+  function valorDe(id){
+    const campo = state.headerObligatorios.find((c) => c.id === id);
+    return campo ? String(campo.value || '').trim() : '';
+  }
+
+  function setHint(id, texto, tono){
+    const el = document.getElementById('hint-' + id);
+    if (!el) return;
+    el.textContent = texto || '';
+    el.className = 'campo-hint' + (texto ? '' : ' oculto') + (tono ? ' ' + tono : '');
+  }
+
+  /* --- aplicar una UP encontrada en la base ---------------------- */
+  function aplicarUp(up, opciones){
+    const o = opciones || {};
+    if (!o.saltarNombre) setValor('unidadNombre', up.nombre);
+    if (!o.saltarId) setValor('idUp', up.id);
+    if (!o.saltarCedula && up.cedula) setValor('cedula', up.cedula);
+    if (up.nodo && nombrePorNodo.has(up.nodo)) {
+      const etiqueta = etiquetaGestor(up.nodo, nombrePorNodo.get(up.nodo));
+      if (norm(valorDe('gestor')) !== norm(etiqueta)) {
+        setValor('gestor', etiqueta);
+        nodoActual = up.nodo;
+        renderDatalistUps();
+        setHintGestor();
+      }
+    }
+    setHint('unidadNombre', 'Datos traídos de la base (ID ' + up.id +
+            (up.cedula ? ' · CC ' + up.cedula : '') + '). Puedes corregir cualquier casilla a mano.', 'ok');
+  }
+
+  function setHintGestor(){
+    const texto = valorDe('gestor');
+    if (!texto) {
+      nodoActual = '';
+      setHint('gestor', 'Al elegir el gestor, la lista de «Unidad productiva» (arriba) mostrará solo sus unidades.');
+      return;
+    }
+    if (nodoActual) {
+      const n = (DATOS.ups[nodoActual] || []).length;
+      setHint('gestor', n + (n === 1 ? ' unidad productiva' : ' unidades productivas') +
+              ' de este gestor. Búscala arriba, en «Unidad productiva».', 'ok');
+    } else {
+      setHint('gestor', 'No está en la base: se usará tal cual lo escribiste y en «Unidad productiva» (arriba) verás todas las unidades.', 'aviso');
+    }
+  }
+
+  /* --- reacciones a lo que escribe el gestor --------------------- */
+  function alEscribirGestor(){
+    const texto = norm(valorDe('gestor'));
+    const nodo = nodoPorEtiqueta.get(texto) || '';
+    if (nodo !== nodoActual) {
+      nodoActual = nodo;
+      renderDatalistUps();
+    }
+    setHintGestor();
+  }
+
+  function alEscribirUnidad(){
+    const up = upPorTextoUp.get(norm(valorDe('unidadNombre')));
+    if (up) {
+      // Si el nombre traía el sufijo [ID ...] para desempatar, se
+      // guarda el nombre limpio en la casilla.
+      aplicarUp(up, { saltarNombre: false });
+    } else {
+      setHint('unidadNombre', valorDe('unidadNombre')
+        ? 'Nombre escrito a mano (no está en la base).'
+        : 'Elige de la lista o escríbelo a mano.', valorDe('unidadNombre') ? 'aviso' : '');
+    }
+  }
+
+  function alEscribirId(){
+    const up = upPorId.get(norm(valorDe('idUp')));
+    if (up) aplicarUp(up, { saltarId: true });
+  }
+
+  function alEscribirCedula(){
+    const ced = soloDigitos(valorDe('cedula'));
+    if (ced.length < 5) return;
+    const lista = upsPorCedula.get(ced);
+    if (lista && lista.length === 1) aplicarUp(lista[0], { saltarCedula: true });
+  }
+
+  $listaObligatorios.addEventListener('input', (e) => {
+    const id = e.target.dataset.obId;
+    if (id === 'gestor') alEscribirGestor();
+    if (id === 'unidadNombre') alEscribirUnidad();
+    if (id === 'idUp') alEscribirId();
+    if (id === 'cedula') alEscribirCedula();
+  });
+
+  // Al salir de la casilla del gestor, si escribió solo el nodo o
+  // solo el nombre, se completa a "NODO — NOMBRE".
+  $listaObligatorios.addEventListener('change', (e) => {
+    if (e.target.dataset.obId !== 'gestor') return;
+    if (nodoActual && nombrePorNodo.has(nodoActual)) {
+      setValor('gestor', etiquetaGestor(nodoActual, nombrePorNodo.get(nodoActual)));
+      setHintGestor();
+    }
+  });
+
+  function iniciarBaseDatos(){
+    renderDatalistGestores();
+    renderDatalistUps();
+    setHintGestor();
+    setHint('unidadNombre', 'Elige de la lista o escríbelo a mano.');
+  }
+
+  /* ==============================================================
+     INICIO
+     ============================================================== */
+  renderCamposObligatorios();
+  indexarBase(window.DATOS_EP);
+  iniciarBaseDatos();
+  if (!window.DATOS_EP) cargarBaseDeLaApi();
+  renderCamposExtra();
+  renderitems();
+})();
+</script>
+</body>
+</html>

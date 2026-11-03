@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <!-- La barra del navegador en el celular toma el color de la cabecera de la aplicación. -->
+  <meta name="theme-color" content="#3D3A78" />
+  <meta name="referrer" content="same-origin" />
+  <!-- Deja puesto el tema (claro u oscuro) antes de dibujar, para que no parpadee. -->
+  <script src="/tema.js"></script>
+  <!-- Verificación humana del login (Cloudflare Turnstile). -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>Bitácora Memories — Bitácora e inventario</title>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>

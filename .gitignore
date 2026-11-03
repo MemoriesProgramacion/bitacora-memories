@@ -1,0 +1,18 @@
+node_modules
+dist
+.env
+.env.local
+*.log
+.DS_Store
+backend/storage/
+
+# Reportes de pruebas (CI y local)
+frontend/reportes/
+frontend/test-results/
+frontend/playwright-report/
+backend/reportes/
+frontend/.auth/
+backend/storage-e2e/
+frontend/dist-e2e/
+backend/storage-carga/
+

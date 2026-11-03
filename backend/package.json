@@ -1,0 +1,43 @@
+{
+  "name": "bitacora-memories-backend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "API REST de la Bitácora y del módulo de inventario (Node.js + Express + PostgreSQL)",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrar": "node scripts/migrar.js",
+    "db:demo": "node scripts/migrar.js --demo",
+    "usuario:crear": "node scripts/crear-coordinador.js",
+    "test": "node --test",
+    "test:cobertura": "node --test --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-lines=95 --test-coverage-branches=80 --test-coverage-functions=93",
+    "superadmin:crear": "node scripts/crear-superadmin.js",
+    "bodegas:ejemplo": "node scripts/bodegas-ejemplo.js",
+    "kits:ejemplo": "node scripts/kits-ejemplo.js",
+    "logistica:fusionar": "node scripts/fusionar-logistica.js",
+    "inventario:importar": "node scripts/importar-inventario.js",
+    "catalogo:importar": "node scripts/importar-catalogo.js",
+    "e2e:preparar": "node scripts/preparar-e2e.js",
+    "carga": "node scripts/carga.js"
+  },
+  "dependencies": {
+    "bwip-js": "^4.5.1",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "multer": "^2.0.2",
+    "nodemailer": "^10.2.1",
+    "pdfkit": "^0.17.0",
+    "pg": "^8.16.3"
+  },
+  "overrides": {
+    "uuid": "^11.1.1"
+  },
+  "devDependencies": {
+    "autocannon": "^8.0.0"
+  }
+}
