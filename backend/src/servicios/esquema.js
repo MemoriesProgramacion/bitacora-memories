@@ -934,6 +934,13 @@ CREATE TABLE IF NOT EXISTS encuentros_tic_grupos (
     creado_por_nombre VARCHAR(200) NULL,
     creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- Los tres grupos (uno por programa) existen siempre y están activos desde el inicio.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_encuentros_tic_grupos_programa ON encuentros_tic_grupos (programa);
+INSERT INTO encuentros_tic_grupos (programa, nombre, creado_por, creado_por_nombre) VALUES
+    ('ninas', 'Niñas TIC', 'sistema', 'Sistema'),
+    ('mujeres', 'Mujeres TIC', 'sistema', 'Sistema'),
+    ('alfabetizadores', 'Alfabetizadores TIC', 'sistema', 'Sistema')
+ON CONFLICT (programa) DO NOTHING;
 CREATE TABLE IF NOT EXISTS encuentros_tic_archivos (
     id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     grupo_id INTEGER NOT NULL REFERENCES encuentros_tic_grupos(id) ON DELETE CASCADE,

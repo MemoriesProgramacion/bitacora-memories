@@ -9,7 +9,6 @@ import path from 'node:path';
 import { Router } from 'express';
 import multer from 'multer';
 import { query, transaccion } from './db.js';
-import { normTexto } from './alcance.js';
 import { noEncontrado, prohibido, solicitudInvalida } from './errores.js';
 import { registrar } from './servicios/actividad.js';
 import { contenidoValido, tipoPorNombre } from './servicios/tipoArchivo.js';
@@ -36,7 +35,6 @@ const MB_MAXIMO = Math.max(CONSENTIMIENTO.mb, ...Object.values(ELEMENTOS).map((e
 // Pueden entrar quien tiene acceso total, la coordinación regional y los talleristas (las lideresas).
 const ROLES = ['coordinador', 'tallerista'];
 const general = (u) => Boolean(u?.general);
-const regionDe = (u) => u?.alcance?.region || null;
 
 const subida = multer({
   dest: path.join(os.tmpdir(), 'bitacora-encuentros-tic'),
@@ -58,12 +56,6 @@ const cargar = (middleware) => (req, res, next) => {
 
 const nombreArchivo = (f) => String(f.originalname || 'archivo').replace(/[\r\n\\/]/g, '_').slice(0, 200);
 const idValido = (v) => /^\d{1,9}$/.test(String(v || ''));
-const texto = (v, campo, max, obligatorio = true) => {
-  const t = typeof v === 'string' ? v.trim() : '';
-  if (obligatorio && !t) throw solicitudInvalida(`Escribe ${campo}.`);
-  if (t.length > max) throw solicitudInvalida(`${campo[0].toUpperCase()}${campo.slice(1)} puede tener hasta ${max} caracteres.`);
-  return t;
-};
 const actividad = (req, accion, objeto, cambios = {}) => registrar(req.usuario, { accion, objeto, cambios });
 
 router.use((req, _res, next) => {
@@ -71,19 +63,13 @@ router.use((req, _res, next) => {
   next();
 });
 
-// Devuelve el grupo si la cuenta lo puede ver: quien tiene acceso total ve todos; los demás, los de su región y
-// los que crearon.
-async function grupoVisible(u, id) {
+// Los tres grupos (uno por programa) están siempre activos y los ve toda cuenta con acceso a la sección; el
+// esquema los crea al arrancar.
+async function grupoVisible(_u, id) {
   if (!idValido(id)) throw noEncontrado('El grupo no existe.');
   const { rows: [g] } = await query('SELECT * FROM encuentros_tic_grupos WHERE id=$1', [id]);
-  if (!g || !puedeVerGrupo(u, g)) throw noEncontrado('El grupo no existe.');
+  if (!g) throw noEncontrado('El grupo no existe.');
   return g;
-}
-function puedeVerGrupo(u, g) {
-  if (general(u)) return true;
-  if (g.creado_por === u.sub) return true;
-  const r = regionDe(u);
-  return !r || (g.region && normTexto(g.region) === normTexto(r));
 }
 
 // Arma el estado de cada grupo: consentimientos y, por encuentro, qué entregables tiene y si ya se entregó.
@@ -116,8 +102,9 @@ async function estadoGrupos(grupos) {
 }
 
 router.get('/', async (req, res) => {
-  const { rows } = await query('SELECT * FROM encuentros_tic_grupos ORDER BY creado_en DESC, id DESC');
-  const grupos = await estadoGrupos(rows.filter((g) => puedeVerGrupo(req.usuario, g)));
+  const { rows } = await query(`SELECT * FROM encuentros_tic_grupos
+    ORDER BY array_position(ARRAY['ninas','mujeres','alfabetizadores']::varchar[], programa), id`);
+  const grupos = await estadoGrupos(rows);
   res.json({
     ok: true,
     grupos,
@@ -126,20 +113,6 @@ router.get('/', async (req, res) => {
     consentimiento: { formatos: CONSENTIMIENTO.formatos, mb: CONSENTIMIENTO.mb, ext: CONSENTIMIENTO.ext, max: CONSENTIMIENTO.max },
     total_encuentros: TOTAL_ENCUENTROS,
   });
-});
-
-// Crea el espacio de entrega de un grupo.
-router.post('/grupos', async (req, res) => {
-  const programa = String(req.body?.programa || '');
-  if (!PROGRAMAS[programa]) throw solicitudInvalida('Elige el programa: Niñas TIC, Mujeres TIC o Alfabetizadores TIC.');
-  const nombre = texto(req.body?.nombre, 'el nombre del grupo', 150);
-  const municipio = texto(req.body?.municipio, 'el municipio', 100);
-  const lugar = texto(req.body?.lugar, 'el lugar', 200, false);
-  const { rows: [g] } = await query(`INSERT INTO encuentros_tic_grupos (programa, nombre, municipio, lugar, region, creado_por, creado_por_nombre)
-    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, [programa, nombre, municipio, lugar, regionDe(req.usuario), req.usuario.sub, req.usuario.nombre || null]);
-  await actividad(req, 'encuentros_tic.crear_grupo', { tipo: 'encuentros_tic_grupo', id: g.id }, { programa, nombre, municipio });
-  const [item] = await estadoGrupos([g]);
-  res.status(201).json({ ok: true, item });
 });
 
 // Valida un archivo contra la extensión y el contenido admitidos.
@@ -175,24 +148,32 @@ const encuentroValido = (v) => {
   if (!Number.isInteger(n) || n < 1 || n > TOTAL_ENCUENTROS) throw noEncontrado('El encuentro no existe.');
   return n;
 };
+// Indica si el encuentro ya se guardó en la carpeta de evidencias: desde ese momento queda cerrado.
+async function yaEntregado(db, grupoId, n) {
+  const { rowCount } = await db.query('SELECT 1 FROM encuentros_tic_entregados WHERE grupo_id=$1 AND encuentro=$2', [grupoId, n]);
+  return rowCount > 0;
+}
+const CERRADO = (n) => solicitudInvalida(`El encuentro ${n} ya se guardó en la carpeta de evidencias: sus documentos quedan cerrados y no se pueden cambiar.`);
 async function tieneConsentimientos(db, grupoId) {
   const { rowCount } = await db.query("SELECT 1 FROM encuentros_tic_archivos WHERE grupo_id=$1 AND elemento='consentimiento' LIMIT 1", [grupoId]);
   return rowCount > 0;
 }
 
-// Guarda el encuentro en la carpeta de evidencias: solo si tiene los cuatro entregables. Va antes de la carga
-// de archivos para que «entregar» no se tome como el nombre de un entregable.
+// Guarda el encuentro en la carpeta de evidencias: solo si tiene los cuatro entregables, y una sola vez. Desde
+// ese momento queda cerrado. Va antes de la carga de archivos para que «entregar» no se tome como el nombre de
+// un entregable.
 router.post('/grupos/:id/encuentros/:n/entregar', async (req, res) => {
   const g = await grupoVisible(req.usuario, req.params.id);
   const n = encuentroValido(req.params.n);
   await transaccion(async (db) => {
+    await db.query('SELECT id FROM encuentros_tic_grupos WHERE id=$1 FOR UPDATE', [g.id]);
+    if (await yaEntregado(db, g.id, n)) throw CERRADO(n);
     if (!(await tieneConsentimientos(db, g.id))) throw solicitudInvalida('Primero sube los consentimientos del grupo.');
     const { rows } = await db.query('SELECT DISTINCT elemento FROM encuentros_tic_archivos WHERE grupo_id=$1 AND encuentro=$2', [g.id, n]);
     const tiene = new Set(rows.map((r) => r.elemento));
     const faltan = Object.entries(ELEMENTOS).filter(([k]) => !tiene.has(k)).map(([, e]) => e.titulo);
     if (faltan.length) throw solicitudInvalida(`Al encuentro ${n} le falta: ${faltan.join(', ')}.`);
-    await db.query(`INSERT INTO encuentros_tic_entregados (grupo_id, encuentro, entregado_por, entregado_por_nombre) VALUES ($1,$2,$3,$4)
-      ON CONFLICT (grupo_id, encuentro) DO UPDATE SET entregado_en = now(), entregado_por = EXCLUDED.entregado_por, entregado_por_nombre = EXCLUDED.entregado_por_nombre`,
+    await db.query(`INSERT INTO encuentros_tic_entregados (grupo_id, encuentro, entregado_por, entregado_por_nombre) VALUES ($1,$2,$3,$4)`,
     [g.id, n, req.usuario.sub, req.usuario.nombre || null]);
   });
   await actividad(req, 'encuentros_tic.entregar', { tipo: 'encuentros_tic_grupo', id: g.id }, { encuentro: n });
@@ -200,8 +181,8 @@ router.post('/grupos/:id/encuentros/:n/entregar', async (req, res) => {
   res.json({ ok: true, item });
 });
 
-// Sube o reemplaza uno de los cuatro entregables de un encuentro. Si el encuentro ya estaba entregado, vuelve
-// a quedar pendiente para que se revise y se guarde otra vez.
+// Sube o reemplaza uno de los cuatro entregables de un encuentro que todavía no se ha guardado. Un encuentro
+// guardado queda cerrado: sus documentos se ven y se descargan, pero no se cambian.
 router.post('/grupos/:id/encuentros/:n/:elemento', cargar(subida.single('archivo')), async (req, res) => {
   const g = await grupoVisible(req.usuario, req.params.id);
   const n = encuentroValido(req.params.n);
@@ -212,11 +193,11 @@ router.post('/grupos/:id/encuentros/:n/:elemento', cargar(subida.single('archivo
   const bytes = await fs.readFile(req.file.path);
   await transaccion(async (db) => {
     await db.query('SELECT id FROM encuentros_tic_grupos WHERE id=$1 FOR UPDATE', [g.id]);
+    if (await yaEntregado(db, g.id, n)) throw CERRADO(n);
     if (!(await tieneConsentimientos(db, g.id))) throw solicitudInvalida('Primero sube los consentimientos del grupo.');
     await db.query('DELETE FROM encuentros_tic_archivos WHERE grupo_id=$1 AND encuentro=$2 AND elemento=$3', [g.id, n, req.params.elemento]);
     await db.query(`INSERT INTO encuentros_tic_archivos (grupo_id, encuentro, elemento, nombre, mime, tamano, archivo, subido_por, subido_por_nombre)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [g.id, n, req.params.elemento, nombre, mime, req.file.size, bytes, req.usuario.sub, req.usuario.nombre || null]);
-    await db.query('DELETE FROM encuentros_tic_entregados WHERE grupo_id=$1 AND encuentro=$2', [g.id, n]);
   });
   await actividad(req, 'encuentros_tic.subir', { tipo: 'encuentros_tic_grupo', id: g.id }, { encuentro: n, elemento: req.params.elemento, archivo: nombre });
   const [item] = await estadoGrupos([g]);
