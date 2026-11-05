@@ -18,7 +18,7 @@ export const puedeEditarUP = (session) => esGeneral(session);
 export const SECCIONES_GESTOR = ['bitacora', 'agenda', 'capitalizacion', 'visitas', 'eventos', 'novedades', 'entregas', 'seguimiento'];
 
 export const SECCIONES_TECNICO = ['bitacora', 'agenda', 'eventos', 'novedades', 'capitalizacion', 'entregas', 'saldos', 'seguimiento'];
-export const SECCIONES_TALLERISTA = ['talleres', 'novedades'];
+export const SECCIONES_TALLERISTA = ['talleres', 'encuentrostic', 'novedades'];
 
 export const SECCIONES_COORDINADOR_COMPRAS = ['entregas', 'capitalizacion', 'carguecompras', 'kardex', 'saldos', 'seguimiento'];
 
@@ -33,6 +33,7 @@ export const SECCIONES_EXCLUSIVAS = {
   proveedores: ['coordinador'],
   mibodega: ['coordinador'],
   talleres: ['coordinador', 'tallerista'],
+  encuentrostic: ['coordinador', 'tallerista'],
 };
 
 // Indica si la cuenta puede ver una sección.

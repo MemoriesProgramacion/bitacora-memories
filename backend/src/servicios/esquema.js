@@ -919,6 +919,44 @@ CREATE TABLE IF NOT EXISTS historial_subsanacion_cambios (
     despues      TEXT NULL,
     PRIMARY KEY (id_historial, id_unico)
 );
+
+-- Entregas de encuentros de Niñas TIC, Mujeres TIC y Alfabetizadores TIC (ver rutasEncuentrosTic.js): el
+-- espacio de entrega de cada grupo, sus consentimientos, los cuatro entregables de cada encuentro y el cierre de
+-- cada encuentro en la carpeta de evidencias.
+CREATE TABLE IF NOT EXISTS encuentros_tic_grupos (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    programa VARCHAR(20) NOT NULL CHECK (programa IN ('ninas', 'mujeres', 'alfabetizadores')),
+    nombre VARCHAR(150) NOT NULL,
+    municipio VARCHAR(100) NOT NULL DEFAULT '',
+    lugar VARCHAR(200) NOT NULL DEFAULT '',
+    region VARCHAR(100) NULL,
+    creado_por VARCHAR(200) NOT NULL,
+    creado_por_nombre VARCHAR(200) NULL,
+    creado_en TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS encuentros_tic_archivos (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    grupo_id INTEGER NOT NULL REFERENCES encuentros_tic_grupos(id) ON DELETE CASCADE,
+    encuentro SMALLINT NULL CHECK (encuentro BETWEEN 1 AND 10),
+    elemento VARCHAR(20) NOT NULL CHECK (elemento IN ('consentimiento', 'fotos', 'asistencia', 'video', 'informe')),
+    nombre TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    tamano BIGINT NOT NULL,
+    archivo BYTEA NOT NULL,
+    subido_por VARCHAR(200) NOT NULL,
+    subido_por_nombre VARCHAR(200) NULL,
+    subido_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CHECK ((elemento = 'consentimiento') = (encuentro IS NULL))
+);
+CREATE INDEX IF NOT EXISTS ix_encuentros_tic_archivos ON encuentros_tic_archivos (grupo_id, encuentro, elemento);
+CREATE TABLE IF NOT EXISTS encuentros_tic_entregados (
+    grupo_id INTEGER NOT NULL REFERENCES encuentros_tic_grupos(id) ON DELETE CASCADE,
+    encuentro SMALLINT NOT NULL CHECK (encuentro BETWEEN 1 AND 10),
+    entregado_en TIMESTAMPTZ NOT NULL DEFAULT now(),
+    entregado_por VARCHAR(200) NOT NULL,
+    entregado_por_nombre VARCHAR(200) NULL,
+    PRIMARY KEY (grupo_id, encuentro)
+);
 `;
 
 // Ejecuta las sentencias para crear las tablas que falten.

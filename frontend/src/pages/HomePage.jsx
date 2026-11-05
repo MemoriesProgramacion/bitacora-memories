@@ -29,6 +29,7 @@ import { Cargando } from '../inventario/componentes/ui';
 const Agenda = lazy(() => import('../sections/Agenda'));
 const Capitalizacion = lazy(() => import('../sections/Capitalizacion'));
 const Talleres = lazy(() => import('../sections/Talleres'));
+const EntregasEncuentros = lazy(() => import('../sections/EntregasEncuentros'));
 const Alistamiento = lazy(() => import('../admin/Alistamiento'));
 const Seguimiento = lazy(() => import('../sections/Seguimiento'));
 
@@ -39,6 +40,7 @@ const SECCIONES = {
   visitas: { label: 'Visitas' },
   eventos: { label: 'Eventos' },
   talleres: { label: 'Talleres de fortalecimiento' },
+  encuentrostic: { label: 'Entregas de encuentros' },
   capitalizacion: { label: 'Capitalización' },
   novedades: { label: 'Novedades' },
   entregas: { label: 'Entregas' },
@@ -127,6 +129,7 @@ function Shell({
           {seccionActiva === 'agenda' && <Agenda data={datos} session={session} />}
           {seccionActiva === 'capitalizacion' && <Capitalizacion data={datos} session={session} />}
           {seccionActiva === 'talleres' && <Talleres session={session} />}
+          {seccionActiva === 'encuentrostic' && <EntregasEncuentros session={session} />}
           {seccionActiva === 'alistamiento' && <Alistamiento />}
           {seccionActiva === 'seguimiento' && <Seguimiento data={datos} session={session} />}
         </Suspense>
