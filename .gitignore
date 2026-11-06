@@ -16,3 +16,7 @@ backend/storage-e2e/
 frontend/dist-e2e/
 backend/storage-carga/
 
+
+# Respaldos locales de la base (tienen datos personales; nunca al repo)
+respaldos/
+*.dump

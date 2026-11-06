@@ -32,6 +32,13 @@ Se usa desde el computador o el celular, con un único ingreso para todos. Cada 
 - Encuestas de satisfacción y de apropiación.
 - Cálculo del cumplimiento de formación de cada unidad.
 
+### Entregas de encuentros
+- Un espacio de entrega fijo para cada programa: **Niñas TIC, Mujeres TIC y Alfabetizadores TIC**, con 10 encuentros cada uno.
+- Consentimientos del grupo, que se suben una sola vez antes del primer encuentro.
+- Cuatro entregables por encuentro: registro fotográfico, lista de asistencia, video e informe de actividades.
+- Al guardar el encuentro en la carpeta de evidencias queda cerrado: sus documentos se ven y se descargan, pero ya no se cambian.
+- Formatos para descargar e imprimir (informe de actividades y listas de asistencia) y herramienta para armar el registro fotográfico.
+
 ### Eventos
 - Calendario de eventos y convocatorias por región.
 - Registro de asistencia y eventos de cierre.

@@ -7253,3 +7253,108 @@ test('visitas: una visita cerrada de formato antiguo se lista y la coordinación
     await query("DELETE FROM representantes WHERE documento = '9900001'");
   }
 });
+
+test('entregas de encuentros TIC: tres grupos fijos, consentimientos primero, cuatro entregables por encuentro y encuentro cerrado al guardarlo', async () => {
+  await reiniciarLimites();
+  const jefe = await entrar('jefe', 'Super-Segura-2026x');
+  // Cuentas propias de esta prueba, para no depender de lo que otras pruebas cambian en las suyas.
+  for (const [rol, usuario, nombre, clave] of [['tallerista', 'tic.tallerista', 'Lideresa TIC', 'Lideresa-Tic-2026'], ['coordinador', 'tic.regional', 'Regional TIC', 'Regional-Tic-2026']]) {
+    assert.equal((await jefe.http('POST', '/api/admin/usuarios', { rol, usuario, nombre, clave, region: 'Región 1' })).status, 200, usuario);
+  }
+  const reg = await entrar('tic.regional', 'Regional-Tic-2026');
+  const t1 = await entrar('tic.tallerista', 'Lideresa-Tic-2026');
+  assert.equal(t1.r.json.sesion.rol, 'tallerista');
+  const gestor = await entrar('atlan1', '1001001001');
+  assert.equal(gestor.r.json.sesion.rol, 'gestor');
+  const API = '/api/encuentros-tic';
+  const multipart = async (s, ruta, archivos = []) => {
+    const token = (await s.http('GET', '/api/auth/sesion')).json.token;
+    const f = new FormData();
+    archivos.forEach(([campo, nombre, contenido, tipo = 'application/pdf']) => f.append(campo, new Blob([contenido], { type: tipo }), nombre));
+    const r = await fetch(base + API + ruta, { method: 'POST', headers: { Cookie: s.http.cookie(), 'X-CSRF-Token': token }, body: f });
+    return { status: r.status, json: await r.json() };
+  };
+  const pdf = '%PDF-1.4 evidencia del encuentro';
+  const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10, 0, 0]);
+  const mp4 = Buffer.from([0, 0, 0, 0x18, ...Buffer.from('ftypmp42'), 0, 0, 0, 0]);
+  const docx = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0, 0]);
+  const ENTREGABLES = { fotos: ['fotos.pdf', pdf], asistencia: ['asistencia.png', png, 'image/png'], video: ['video.mp4', mp4, 'video/mp4'], informe: ['informe.docx', docx] };
+  const subir = (s, g, n, elemento, [nombre, contenido, tipo] = ENTREGABLES[elemento]) => multipart(s, `/grupos/${g}/encuentros/${n}/${elemento}`, [['archivo', nombre, contenido, tipo]]);
+  const entregar = (s, g, n) => s.http('POST', `${API}/grupos/${g}/encuentros/${n}/entregar`);
+
+  try {
+    // Acceso: coordinación general, coordinación regional y talleristas; el gestor no entra.
+    assert.equal((await gestor.http('GET', API)).status, 403);
+    const lista = (await t1.http('GET', API)).json;
+    assert.deepEqual(lista.grupos.map((g) => [g.programa, g.nombre]), [['ninas', 'Niñas TIC'], ['mujeres', 'Mujeres TIC'], ['alfabetizadores', 'Alfabetizadores TIC']]);
+    assert.equal(lista.total_encuentros, 10);
+    assert.deepEqual(lista.elementos.map((e) => e.codigo), ['fotos', 'asistencia', 'video', 'informe']);
+    assert.ok(lista.grupos.every((g) => g.encuentros.length === 10 && g.entregados === 0 && g.consentimientos.length === 0));
+    assert.equal((await reg.http('GET', API)).status, 200);
+    const [ninas, mujeres] = lista.grupos.map((g) => g.id);
+
+    // Grupo, encuentro y entregable inexistentes.
+    assert.equal((await subir(jefe, 'abc', 1, 'fotos')).status, 404);
+    assert.equal((await subir(jefe, 999999, 1, 'fotos')).status, 404);
+    assert.equal((await subir(jefe, ninas, 11, 'fotos')).status, 404);
+    assert.equal((await subir(jefe, ninas, 0, 'fotos')).status, 404);
+    assert.equal((await multipart(jefe, `/grupos/${ninas}/encuentros/1/otra`, [['archivo', 'a.pdf', pdf]])).status, 404);
+    assert.equal((await entregar(jefe, ninas, 'x')).status, 404);
+
+    // Antes de los consentimientos no se sube ni se entrega nada.
+    assert.match((await subir(t1, ninas, 1, 'fotos')).json.error, /consentimientos/);
+    assert.match((await entregar(t1, ninas, 1)).json.error, /consentimientos/);
+
+    // Consentimientos: al menos uno, formato y contenido válidos, hasta 10 a la vez.
+    assert.equal((await multipart(t1, `/grupos/${ninas}/consentimientos`)).status, 400);
+    assert.match((await multipart(t1, `/grupos/${ninas}/consentimientos`, [['archivos', 'c.docx', docx]])).json.error, /no es un formato admitido/);
+    assert.match((await multipart(t1, `/grupos/${ninas}/consentimientos`, [['archivos', 'c.pdf', 'no soy un pdf']])).json.error, /no corresponde/);
+    const once = Array.from({ length: 11 }, (_, i) => ['archivos', `c${i}.pdf`, pdf]);
+    assert.match((await multipart(t1, `/grupos/${ninas}/consentimientos`, once)).json.error, /hasta 10 archivos/);
+    const cons = await multipart(t1, `/grupos/${ninas}/consentimientos`, [['archivos', 'consentimiento-1.pdf', pdf], ['archivos', 'consentimiento-2.png', png, 'image/png']]);
+    assert.equal(cons.status, 200);
+    assert.deepEqual(cons.json.item.consentimientos.map((c) => c.nombre), ['consentimiento-1.pdf', 'consentimiento-2.png']);
+
+    // Entregables: formato, contenido y que estén los cuatro antes de guardar.
+    assert.equal((await multipart(t1, `/grupos/${ninas}/encuentros/1/fotos`)).status, 400);
+    assert.match((await subir(t1, ninas, 1, 'fotos', ['fotos.png', png, 'image/png'])).json.error, /Sube PDF/);
+    assert.match((await subir(t1, ninas, 1, 'video', ['video.mp4', pdf, 'video/mp4'])).json.error, /no corresponde/);
+    assert.equal((await subir(t1, ninas, 1, 'fotos')).status, 200);
+    assert.match((await entregar(t1, ninas, 1)).json.error, /le falta: Lista de asistencia, Video, Informe de actividades/);
+    // Reemplazar un entregable deja uno solo.
+    assert.equal((await subir(t1, ninas, 1, 'fotos', ['fotos-v2.pdf', pdf])).status, 200);
+    for (const e of ['asistencia', 'video']) assert.equal((await subir(t1, ninas, 1, e)).status, 200);
+    const casi = await subir(reg, ninas, 1, 'informe');
+    assert.equal(casi.status, 200);
+    const e1 = casi.json.item.encuentros[0];
+    assert.deepEqual(Object.values(e1.elementos).map((a) => a.nombre), ['fotos-v2.pdf', 'asistencia.png', 'video.mp4', 'informe.docx']);
+    assert.equal(e1.entregado_en, null);
+
+    // Guardar en la carpeta de evidencias cierra el encuentro: no se reemplaza ni se guarda otra vez.
+    const hecho = await entregar(t1, ninas, 1);
+    assert.equal(hecho.status, 200);
+    assert.equal(hecho.json.item.entregados, 1);
+    assert.equal(hecho.json.item.encuentros[0].entregado_por, 'Lideresa TIC');
+    assert.match((await entregar(jefe, ninas, 1)).json.error, /ya se guardó/);
+    assert.match((await subir(jefe, ninas, 1, 'fotos')).json.error, /ya se guardó/);
+    // Los otros encuentros y los otros grupos siguen abiertos e independientes.
+    assert.equal((await subir(t1, ninas, 2, 'fotos')).status, 200);
+    assert.match((await subir(t1, mujeres, 1, 'fotos')).json.error, /consentimientos/);
+
+    // Descarga: el archivo sale tal cual se subió; ids inválidos o inexistentes dan 404; el gestor no descarga.
+    const idFotos = e1.elementos.fotos.id;
+    const r = await fetch(`${base}${API}/archivos/${idFotos}`, { headers: { Cookie: t1.http.cookie() } });
+    assert.equal(r.status, 200);
+    assert.match(r.headers.get('content-disposition'), /fotos-v2\.pdf/);
+    assert.equal(Buffer.from(await r.arrayBuffer()).toString(), pdf);
+    assert.equal((await t1.http('GET', `${API}/archivos/xyz`)).status, 404);
+    assert.equal((await t1.http('GET', `${API}/archivos/999999`)).status, 404);
+    assert.equal((await gestor.http('GET', `${API}/archivos/${idFotos}`)).status, 403);
+
+    // Todo queda en el registro de actividad.
+    const { rows } = await query("SELECT accion, count(*)::int AS n FROM actividad WHERE accion LIKE 'encuentros_tic.%' GROUP BY accion ORDER BY accion");
+    assert.deepEqual(rows, [{ accion: 'encuentros_tic.consentimientos', n: 1 }, { accion: 'encuentros_tic.entregar', n: 1 }, { accion: 'encuentros_tic.subir', n: 6 }]);
+  } finally {
+    await query('DELETE FROM encuentros_tic_entregados');
+    await query('DELETE FROM encuentros_tic_archivos');  }
+});

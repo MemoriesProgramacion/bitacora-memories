@@ -57,8 +57,8 @@ export function autenticar() {
     if (cuenta.rol === ROLES.TALLERISTA) {
       const ruta = req.originalUrl.split('?')[0].replace(/^\/api/, '');
       const permitido = (LECTURA.has(req.method) && ['/eventos', '/avisos', '/tickets', '/tickets/adjunto', '/config'].includes(ruta))
-        || (req.method === 'POST' && ['/tickets', '/tickets/gestion'].includes(ruta)) || /^\/talleres(?:\/|$)/.test(ruta);
-      if (!permitido) return next(prohibido('El Tallerista solo tiene acceso a Talleres, Eventos y Novedades.'));
+        || (req.method === 'POST' && ['/tickets', '/tickets/gestion'].includes(ruta)) || /^\/(?:talleres|encuentros-tic)(?:\/|$)/.test(ruta);
+      if (!permitido) return next(prohibido('El Tallerista solo tiene acceso a Talleres, Entregas de encuentros, Eventos y Novedades.'));
     }
     const creaNovedad = (['PUT', 'DELETE'].includes(req.method) && req.path === '/avisos') || (req.method === 'POST' && ['/tickets', '/tickets/gestion'].includes(req.path));
     const verificaSoporte = req.method === 'POST' && req.path === '/seguimiento/soportes/verificar';
