@@ -16,6 +16,7 @@ backend/
 │   ├── server.js            Punto de entrada
 │   ├── app.js               Express: cabeceras de seguridad, sesión, CSRF, errores, sirve frontend/dist
 │   ├── rutas.js             Rutas de la Bitácora (/api)
+│   ├── rutasEncuentrosTic.js Entregas de encuentros de Niñas, Mujeres y Alfabetizadores TIC (/api/encuentros-tic)
 │   ├── config.js            Variables de entorno (.env)
 │   ├── db.js                Pool de PostgreSQL y transacciones (esquema public)
 │   ├── auth.js              Acceso a la Bitácora por sesión + roles
@@ -55,6 +56,12 @@ Añadidas para lo que el esquema original no cubría: `archivos` (antes Blob
 Storage), `visitas`, `eventos` + `evento_destinatarios`, `novedades` +
 `novedad_destinatarios`, `listas_compra` + `lista_compra_items`, `entregas` +
 `entrega_reagendamientos`.
+
+Entregas de encuentros TIC (se crean solas al arrancar, en `src/servicios/esquema.js`):
+`encuentros_tic_grupos` (los tres grupos fijos, uno por programa),
+`encuentros_tic_archivos` (consentimientos y los cuatro entregables de cada
+encuentro, guardados en la base) y `encuentros_tic_entregados` (encuentros ya
+guardados en la carpeta de evidencias, que quedan cerrados).
 
 Columnas añadidas a tablas existentes: `gestores.clave_hash`,
 `coordinadores.cedula`, `coordinadores.correo`, `ciudadanos.cedula`,

@@ -52,6 +52,7 @@ import * as coherencia from './servicios/coherencia.js';
 import * as salida from './servicios/salida.js';
 import * as formacion from './servicios/formacion.js';
 import rutasTalleres from './rutasTalleres.js';
+import rutasEncuentrosTic from './rutasEncuentrosTic.js';
 
 const router = express.Router();
 
@@ -81,6 +82,7 @@ async function limpiarTemporales(req) {
 
 const auth = [autenticar(), configuracion.bloquearEscrituraEnMantenimiento];
 router.use('/talleres', auth, rutasTalleres);
+router.use('/encuentros-tic', auth, rutasEncuentrosTic);
 
 // Comprobación de estado pública para monitoreo; el detalle de un fallo solo se escribe en el registro del
 // servidor y no se envía al cliente.
